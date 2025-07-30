@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
-import { PrismaClient } from "../../../../generated/prisma";
-
-const prisma = new PrismaClient();
+import { prisma } from "../../../../lib/prisma";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
