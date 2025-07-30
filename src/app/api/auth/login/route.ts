@@ -7,12 +7,20 @@ import { getBuildSafeDatabase } from "../../../../lib/build-safe-db";
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
 
+// Skip during build
+export const runtime = 'nodejs';
+
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(1, "Password is required"),
 });
 
 export async function POST(request: NextRequest) {
+  // Skip during build time
+  if (process.env.NODE_ENV === 'production' && !process.env.DATABASE_URL) {
+    return NextResponse.json({ message: "Service unavailable during build" }, { status: 503 });
+  }
+
   try {
     const body = await request.json();
     const { email, password } = loginSchema.parse(body);
@@ -21,7 +29,7 @@ export async function POST(request: NextRequest) {
     const db = getBuildSafeDatabase();
     const user = await db.user.findUnique({
       where: { email },
-    });
+    }) as { id: string; email: string; password: string; name: string; role: string } | null;
 
     if (!user) {
       return NextResponse.json(
@@ -31,10 +39,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify password
-    const isPasswordValid = await bcrypt.compare(
-      password,
-      (user as { password: string }).password
-    );
+    const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
       return NextResponse.json(
@@ -46,9 +51,9 @@ export async function POST(request: NextRequest) {
     // Generate JWT token
     const token = jwt.sign(
       { 
-        userId: (user as { id: string | number }).id, 
-        email: (user as { email: string }).email, 
-        role: (user as { role: string }).role 
+        userId: user.id, 
+        email: user.email, 
+        role: user.role 
       },
       process.env.JWT_SECRET || "your-secret-key",
       { expiresIn: "7d" }
@@ -56,10 +61,10 @@ export async function POST(request: NextRequest) {
 
     // Create response with user data (excluding password)
     const userData = {
-      id: (user as { id: string | number }).id,
-      name: (user as { name: string }).name,
-      email: (user as { email: string }).email,
-      role: (user as { role: string }).role,
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
     };
 
     const response = NextResponse.json(
