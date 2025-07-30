@@ -28,6 +28,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
         
+      - name: Setup environment for linting
+        run: |
+          echo "DATABASE_URL=postgresql://test:test@localhost:5432/test" >> .env
+          echo "JWT_SECRET=test-secret-key-for-linting" >> .env
+          echo "NODE_ENV=test" >> .env
+          
+      - name: Generate Prisma client
+        run: npx prisma generate
+        
       - name: Run ESLint
         run: npm run lint
         
@@ -103,6 +112,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
         
+      - name: Setup environment for build
+        run: |
+          echo "DATABASE_URL=postgresql://test:test@localhost:5432/test" >> .env
+          echo "JWT_SECRET=test-secret-key-for-build" >> .env
+          echo "NODE_ENV=production" >> .env
+          
       - name: Generate Prisma client
         run: npx prisma generate
         
