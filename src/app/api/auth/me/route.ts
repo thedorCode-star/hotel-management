@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
-import { prisma } from "../../../../lib/prisma";
+import { getPrisma } from "../../../../lib/prisma";
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -26,17 +26,18 @@ export async function GET(request: NextRequest) {
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET || "your-secret-key") as JwtPayload;
 
-    // Get user from database
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        createdAt: true,
-      },
-    });
+               // Get user from database
+           const prisma = getPrisma();
+           const user = await prisma.user.findUnique({
+             where: { id: decoded.userId },
+             select: {
+               id: true,
+               name: true,
+               email: true,
+               role: true,
+               createdAt: true,
+             },
+           });
 
     if (!user) {
       return NextResponse.json(
