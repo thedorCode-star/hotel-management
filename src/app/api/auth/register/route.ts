@@ -3,6 +3,9 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "../../../../lib/prisma";
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+
 const registerSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Please enter a valid email address"),

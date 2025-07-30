@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import { prisma } from "../../../../lib/prisma";
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+
 interface JwtPayload {
   userId: string;
   email: string;
