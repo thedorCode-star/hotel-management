@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
-import { getPrismaClient } from "../../../../lib/prisma-wrapper";
+import { getDatabase } from "../../../../lib/db";
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -27,8 +27,8 @@ export async function GET(request: NextRequest) {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || "your-secret-key") as JwtPayload;
 
                // Get user from database
-           const prisma = getPrismaClient();
-           const user = await prisma.user.findUnique({
+           const db = getDatabase();
+           const user = await db.user.findUnique({
              where: { id: decoded.userId },
              select: {
                id: true,
