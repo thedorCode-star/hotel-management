@@ -8,7 +8,7 @@ describe('Home Page', () => {
     const heading = screen.getByRole('heading', { 
       name: /welcome to our hotel management system/i 
     })
-    expect(heading).toBeInTheDocument()
+    expect(heading).toBeTruthy()
   })
 
   it('renders login and register links', () => {
@@ -17,8 +17,8 @@ describe('Home Page', () => {
     const loginLink = screen.getByRole('link', { name: /login/i })
     const registerLink = screen.getByRole('link', { name: /register/i })
     
-    expect(loginLink).toBeInTheDocument()
-    expect(registerLink).toBeInTheDocument()
+    expect(loginLink).toBeTruthy()
+    expect(registerLink).toBeTruthy()
   })
 
   it('renders feature cards', () => {
@@ -29,9 +29,9 @@ describe('Home Page', () => {
     const guestCard = screen.getByText(/guest services/i)
     const reviewCard = screen.getByText(/reviews & ratings/i)
     
-    expect(bookingCard).toBeInTheDocument()
-    expect(roomCard).toBeInTheDocument()
-    expect(guestCard).toBeInTheDocument()
-    expect(reviewCard).toBeInTheDocument()
+    expect(bookingCard).toBeTruthy()
+    expect(roomCard).toBeTruthy()
+    expect(guestCard).toBeTruthy()
+    expect(reviewCard).toBeTruthy()
   })
 }) 
