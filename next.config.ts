@@ -2,10 +2,6 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ['@prisma/client'],
-  // Disable API route analysis during build
-  experimental: {
-    serverComponentsExternalPackages: ['@prisma/client'],
-  },
   // Skip API routes during build
   async headers() {
     return [
@@ -28,10 +24,6 @@ const nextConfig: NextConfig = {
         destination: '/api/:path*',
       },
     ];
-  },
-  // Disable static generation for API routes
-  async generateStaticParams() {
-    return [];
   },
 };
 

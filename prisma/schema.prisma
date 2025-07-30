@@ -9,6 +9,8 @@ generator client {
   output   = "../src/generated/prisma"
   // Add Vercel-specific configuration
   previewFeatures = ["driverAdapters"]
+  // Force regeneration on Vercel
+  binaryTargets = ["native", "rhel-openssl-1.0.x"]
 }
 
 datasource db {
