@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
-import { getDatabase } from "../../../../lib/db";
+import { getBuildSafeDatabase } from "../../../../lib/build-safe-db";
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     const { email, password } = loginSchema.parse(body);
 
     // Find user by email
-    const db = getDatabase();
+    const db = getBuildSafeDatabase();
     const user = await db.user.findUnique({
       where: { email },
     });

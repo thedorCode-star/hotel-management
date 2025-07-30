@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-import { getDatabase } from "../../../../lib/db";
+import { getBuildSafeDatabase } from "../../../../lib/build-safe-db";
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     const { name, email, password } = registerSchema.parse(body);
 
                // Check if user already exists
-           const db = getDatabase();
+           const db = getBuildSafeDatabase();
            const existingUser = await db.user.findUnique({
              where: { email },
            });
