@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
-import { getPrisma } from "../../../../lib/prisma";
+import { getPrismaClient } from "../../../../lib/prisma-wrapper";
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     const { email, password } = loginSchema.parse(body);
 
     // Find user by email
-    const prisma = getPrisma();
+    const prisma = getPrismaClient();
     const user = await prisma.user.findUnique({
       where: { email },
     });
