@@ -52,10 +52,10 @@ export default function RegisterPage() {
         // Redirect to login page on successful registration
         window.location.href = "/auth/login?registered=true";
       } else {
-        const error = await response.json();
-        setError("root", { message: error.message || "Registration failed" });
+        const errorData = await response.json();
+        setError("root", { message: errorData.message || "Registration failed" });
       }
-    } catch (error) {
+    } catch {
       setError("root", { message: "An error occurred. Please try again." });
     } finally {
       setIsLoading(false);

@@ -42,10 +42,10 @@ export default function LoginPage() {
         // Redirect to dashboard on successful login
         window.location.href = "/dashboard";
       } else {
-        const error = await response.json();
-        setError("root", { message: error.message || "Login failed" });
+        const errorData = await response.json();
+        setError("root", { message: errorData.message || "Login failed" });
       }
-    } catch (error) {
+    } catch {
       setError("root", { message: "An error occurred. Please try again." });
     } finally {
       setIsLoading(false);

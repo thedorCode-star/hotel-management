@@ -4,6 +4,12 @@ import { PrismaClient } from "../../../../generated/prisma";
 
 const prisma = new PrismaClient();
 
+interface JwtPayload {
+  userId: string;
+  email: string;
+  role: string;
+}
+
 export async function GET(request: NextRequest) {
   try {
     // Get token from cookies
@@ -17,7 +23,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "your-secret-key") as any;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || "your-secret-key") as JwtPayload;
 
     // Get user from database
     const user = await prisma.user.findUnique({
