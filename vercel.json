@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npx prisma generate && npm run build",
+  "buildCommand": "prisma generate && npm run build",
   "installCommand": "npm install",
   "framework": "nextjs",
   "functions": {
@@ -9,5 +9,10 @@
   },
   "env": {
     "NODE_ENV": "production"
+  },
+  "build": {
+    "env": {
+      "PRISMA_GENERATE_DATAPROXY": "true"
+    }
   }
 } 
