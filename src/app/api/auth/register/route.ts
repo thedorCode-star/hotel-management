@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-import { getPrismaClient } from "../../../../lib/prisma-wrapper";
+import { getDatabase } from "../../../../lib/db";
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -18,8 +18,8 @@ export async function POST(request: NextRequest) {
     const { name, email, password } = registerSchema.parse(body);
 
                // Check if user already exists
-           const prisma = getPrismaClient();
-           const existingUser = await prisma.user.findUnique({
+           const db = getDatabase();
+           const existingUser = await db.user.findUnique({
              where: { email },
            });
 
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
            const hashedPassword = await bcrypt.hash(password, 12);
 
            // Create user
-           const user = await prisma.user.create({
+           const user = await db.user.create({
       data: {
         name,
         email,

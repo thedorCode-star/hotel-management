@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
-import { getPrismaClient } from "../../../../lib/prisma-wrapper";
+import { getDatabase } from "../../../../lib/db";
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -18,8 +18,8 @@ export async function POST(request: NextRequest) {
     const { email, password } = loginSchema.parse(body);
 
     // Find user by email
-    const prisma = getPrismaClient();
-    const user = await prisma.user.findUnique({
+    const db = getDatabase();
+    const user = await db.user.findUnique({
       where: { email },
     });
 
@@ -31,7 +31,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    const isPasswordValid = await bcrypt.compare(
+      password,
+      (user as { password: string }).password
+    );
 
     if (!isPasswordValid) {
       return NextResponse.json(
@@ -43,9 +46,9 @@ export async function POST(request: NextRequest) {
     // Generate JWT token
     const token = jwt.sign(
       { 
-        userId: user.id, 
-        email: user.email, 
-        role: user.role 
+        userId: (user as { id: string | number }).id, 
+        email: (user as { email: string }).email, 
+        role: (user as { role: string }).role 
       },
       process.env.JWT_SECRET || "your-secret-key",
       { expiresIn: "7d" }
@@ -53,10 +56,10 @@ export async function POST(request: NextRequest) {
 
     // Create response with user data (excluding password)
     const userData = {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
+      id: (user as { id: string | number }).id,
+      name: (user as { name: string }).name,
+      email: (user as { email: string }).email,
+      role: (user as { role: string }).role,
     };
 
     const response = NextResponse.json(
