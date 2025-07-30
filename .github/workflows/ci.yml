@@ -194,6 +194,7 @@ jobs:
     needs: [build, security-audit]
     if: github.ref == 'refs/heads/main'
     environment: production
+    continue-on-error: true
     
     steps:
       - name: Checkout code
