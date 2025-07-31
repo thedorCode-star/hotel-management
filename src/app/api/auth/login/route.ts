@@ -1,27 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
-import { z } from "zod";
-import { getBuildSafeDatabase } from "../../../../lib/build-safe-db";
 
-// Force dynamic rendering
+// Force dynamic rendering and skip build analysis
 export const dynamic = 'force-dynamic';
-
-// Skip during build
 export const runtime = 'nodejs';
 
-const loginSchema = z.object({
-  email: z.string().email("Please enter a valid email address"),
-  password: z.string().min(1, "Password is required"),
-});
-
+// Skip this route during build time completely
 export async function POST(request: NextRequest) {
-  // Skip during build time
+  // During build time, return immediately
   if (process.env.NODE_ENV === 'production' && !process.env.DATABASE_URL) {
-    return NextResponse.json({ message: "Service unavailable during build" }, { status: 503 });
+    return new NextResponse('Service unavailable during build', { status: 503 });
   }
 
-  try {
+      // Only import and use database at runtime
+    try {
+      const bcrypt = await import('bcryptjs');
+      const jwt = await import('jsonwebtoken');
+      const { z } = await import('zod');
+      const { getBuildSafeDatabase } = await import('../../../../lib/build-safe-db');
+
+    const loginSchema = z.object({
+      email: z.string().email("Please enter a valid email address"),
+      password: z.string().min(1, "Password is required"),
+    });
+
     const body = await request.json();
     const { email, password } = loginSchema.parse(body);
 
@@ -86,13 +87,6 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { message: "Invalid input data", errors: error.format() },
-        { status: 400 }
-      );
-    }
-
     console.error("Login error:", error);
     return NextResponse.json(
       { message: "Internal server error" },

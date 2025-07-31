@@ -1,70 +1,73 @@
 import { NextRequest, NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
-import { z } from "zod";
-import { getBuildSafeDatabase } from "../../../../lib/build-safe-db";
 
-// Force dynamic rendering
+// Force dynamic rendering and skip build analysis
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
-const registerSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  email: z.string().email("Please enter a valid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-});
-
+// Skip this route during build time completely
 export async function POST(request: NextRequest) {
+  // During build time, return immediately
+  if (process.env.NODE_ENV === 'production' && !process.env.DATABASE_URL) {
+    return new NextResponse('Service unavailable during build', { status: 503 });
+  }
+
+  // Only import and use database at runtime
   try {
+    const bcrypt = await import('bcryptjs');
+    const { z } = await import('zod');
+    const { getBuildSafeDatabase } = await import('../../../../lib/build-safe-db');
+
+    const registerSchema = z.object({
+      name: z.string().min(2, "Name must be at least 2 characters"),
+      email: z.string().email("Please enter a valid email address"),
+      password: z.string().min(6, "Password must be at least 6 characters"),
+    });
+
     const body = await request.json();
     const { name, email, password } = registerSchema.parse(body);
 
-               // Check if user already exists
-           const db = getBuildSafeDatabase();
-           const existingUser = await db.user.findUnique({
-             where: { email },
-           });
+    // Check if user already exists
+    const db = getBuildSafeDatabase();
+    const existingUser = await db.user.findUnique({
+      where: { email },
+    });
 
-           if (existingUser) {
-             return NextResponse.json(
-               { message: "User with this email already exists" },
-               { status: 400 }
-             );
-           }
+    if (existingUser) {
+      return NextResponse.json(
+        { message: "User with this email already exists" },
+        { status: 409 }
+      );
+    }
 
-           // Hash password
-           const hashedPassword = await bcrypt.hash(password, 12);
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 12);
 
-           // Create user
-           const user = await db.user.create({
+    // Create new user
+    const user = await db.user.create({
       data: {
         name,
         email,
         password: hashedPassword,
-        role: "GUEST",
+        role: "USER",
       },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        createdAt: true,
-      },
-    });
+    }) as { id: string; name: string; email: string; role: string };
+
+    // Return user data (excluding password)
+    const userData = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    };
 
     return NextResponse.json(
       { 
-        message: "User created successfully",
-        user 
+        message: "User registered successfully",
+        user: userData 
       },
       { status: 201 }
     );
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { message: "Invalid input data", errors: error.format() },
-        { status: 400 }
-      );
-    }
-
     console.error("Registration error:", error);
     return NextResponse.json(
       { message: "Internal server error" },
