@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
         name,
         email,
         password: hashedPassword,
-        role: "USER",
+        role: "GUEST",
       },
     }) as { id: string; name: string; email: string; role: string };
 
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Registration error:", error);
     return NextResponse.json(
-      { message: "Internal server error" },
+      { message: "Internal server error", error: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
