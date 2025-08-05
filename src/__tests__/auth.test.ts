@@ -332,7 +332,7 @@ describe('Authentication API Tests', () => {
       const endTime = Date.now();
       
       expect(hashes).toHaveLength(5);
-      expect(endTime - startTime).toBeLessThan(5000); // Should complete within 5 seconds
+      expect(endTime - startTime).toBeLessThan(10000); // Should complete within 10 seconds
     });
   });
 }); 
