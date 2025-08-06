@@ -1,5 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getBuildSafeDatabase } from '../../../../lib/build-safe-db';
+import * as jwt from 'jsonwebtoken';
+
+interface JwtPayload {
+  userId: string;
+  email: string;
+  role: string;
+}
 
 export async function GET(
   request: NextRequest,
@@ -7,6 +14,20 @@ export async function GET(
 ) {
   try {
     const db = getBuildSafeDatabase();
+    
+    // Get authenticated user from token
+    const token = request.cookies.get("auth-token")?.value;
+    let userId: string | null = null;
+
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || "your-secret-key") as JwtPayload;
+        userId = decoded.userId;
+      } catch (error) {
+        console.error('Token verification failed:', error);
+      }
+    }
+
     const payment = await db.payment.findUnique({
       where: { id: params.id },
       include: {
@@ -29,12 +50,20 @@ export async function GET(
           },
         },
       },
-    });
+    }) as any;
 
     if (!payment) {
       return NextResponse.json(
         { error: 'Payment not found' },
         { status: 404 }
+      );
+    }
+
+    // Check authorization - users can only view their own payments
+    if (userId && payment.booking.userId !== userId) {
+      return NextResponse.json(
+        { error: 'Unauthorized access' },
+        { status: 403 }
       );
     }
 
@@ -58,18 +87,39 @@ export async function PUT(
     
     const { action } = body;
 
+    // Get authenticated user from token
+    const token = request.cookies.get("auth-token")?.value;
+    let userId: string | null = null;
+
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || "your-secret-key") as JwtPayload;
+        userId = decoded.userId;
+      } catch (error) {
+        console.error('Token verification failed:', error);
+      }
+    }
+
     // Check if payment exists
     const existingPayment = await db.payment.findUnique({
       where: { id: params.id },
       include: {
         booking: true,
       },
-    });
+    }) as any;
 
     if (!existingPayment) {
       return NextResponse.json(
         { error: 'Payment not found' },
         { status: 404 }
+      );
+    }
+
+    // Check authorization - users can only modify their own payments
+    if (userId && existingPayment.booking.userId !== userId) {
+      return NextResponse.json(
+        { error: 'Unauthorized access' },
+        { status: 403 }
       );
     }
 
@@ -108,17 +158,17 @@ export async function PUT(
             },
           },
         },
-      });
+      }) as any;
 
       // Update booking status
       await db.booking.update({
-        where: { id: existingPayment.bookingId },
+        where: { id: updatedPayment.booking.id },
         data: { status: 'CANCELLED' },
       });
 
       // Update room status
       await db.room.update({
-        where: { id: existingPayment.booking.roomId },
+        where: { id: updatedPayment.booking.roomId },
         data: { status: 'AVAILABLE' },
       });
 

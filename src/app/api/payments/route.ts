@@ -1,5 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getBuildSafeDatabase } from '../../../lib/build-safe-db';
+import * as jwt from 'jsonwebtoken';
+
+interface JwtPayload {
+  userId: string;
+  email: string;
+  role: string;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,6 +30,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Get authenticated user from token
+    const token = request.cookies.get("auth-token")?.value;
+    let userId: string | null = null;
+
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || "your-secret-key") as JwtPayload;
+        userId = decoded.userId;
+      } catch (error) {
+        console.error('Token verification failed:', error);
+      }
+    }
+
     // Check if booking exists and is valid for payment
     const booking = await db.booking.findUnique({
       where: { id: bookingId },
@@ -30,12 +50,20 @@ export async function POST(request: NextRequest) {
         room: true,
         user: true,
       },
-    });
+    }) as any;
 
     if (!booking) {
       return NextResponse.json(
         { error: 'Booking not found' },
         { status: 404 }
+      );
+    }
+
+    // Check authorization - users can only pay for their own bookings
+    if (userId && booking.userId !== userId) {
+      return NextResponse.json(
+        { error: 'Unauthorized access' },
+        { status: 403 }
       );
     }
 
@@ -47,11 +75,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if payment already exists
-    const existingPayment = await db.payment.findFirst({
+    const existingPayments = await db.payment.findMany({
       where: { bookingId },
-    });
+      take: 1,
+    }) as any[];
 
-    if (existingPayment) {
+    if (existingPayments.length > 0) {
       return NextResponse.json(
         { error: 'Payment already exists for this booking' },
         { status: 409 }
@@ -86,7 +115,7 @@ export async function POST(request: NextRequest) {
           },
         },
       },
-    });
+    }) as any;
 
     // Update booking status if payment is successful
     if (paymentStatus.status === 'completed') {
@@ -120,6 +149,19 @@ export async function GET(request: NextRequest) {
     const bookingId = searchParams.get('bookingId');
     const status = searchParams.get('status');
 
+    // Get authenticated user from token
+    const token = request.cookies.get("auth-token")?.value;
+    let userId: string | null = null;
+
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || "your-secret-key") as JwtPayload;
+        userId = decoded.userId;
+      } catch (error) {
+        console.error('Token verification failed:', error);
+      }
+    }
+
     let whereClause: any = {};
     
     if (bookingId) {
@@ -128,6 +170,13 @@ export async function GET(request: NextRequest) {
     
     if (status && status !== 'all') {
       whereClause.status = status;
+    }
+
+    // If user is authenticated, only show their payments
+    if (userId) {
+      whereClause.booking = {
+        userId: userId
+      };
     }
 
     const payments = await db.payment.findMany({
@@ -153,7 +202,7 @@ export async function GET(request: NextRequest) {
         },
       },
       orderBy: { processedAt: 'desc' },
-    });
+    }) as any[];
 
     return NextResponse.json({ payments });
   } catch (error) {
@@ -185,4 +234,4 @@ async function processPayment(amount: number, paymentMethod: string, cardDetails
       error: 'Payment declined. Please check your card details and try again.',
     };
   }
-} 
+}

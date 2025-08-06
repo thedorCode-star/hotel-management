@@ -1,8 +1,50 @@
 // Build-safe database wrapper
 export interface BuildSafeDatabase {
+  [x: string]: any;
   user: {
     findUnique: (args: unknown) => Promise<unknown>;
     create: (args: unknown) => Promise<unknown>;
+    findMany: (args: unknown) => Promise<unknown>;
+    update: (args: unknown) => Promise<unknown>;
+    delete: (args: unknown) => Promise<unknown>;
+    count: (args: unknown) => Promise<unknown>;
+    groupBy: (args: unknown) => Promise<unknown>;
+  };
+  room: {
+    findUnique: (args: unknown) => Promise<unknown>;
+    create: (args: unknown) => Promise<unknown>;
+    findMany: (args: unknown) => Promise<unknown>;
+    update: (args: unknown) => Promise<unknown>;
+    delete: (args: unknown) => Promise<unknown>;
+    count: (args: unknown) => Promise<unknown>;
+    groupBy: (args: unknown) => Promise<unknown>;
+  };
+  booking: {
+    findUnique: (args: unknown) => Promise<unknown>;
+    create: (args: unknown) => Promise<unknown>;
+    findMany: (args: unknown) => Promise<unknown>;
+    update: (args: unknown) => Promise<unknown>;
+    delete: (args: unknown) => Promise<unknown>;
+    count: (args: unknown) => Promise<unknown>;
+    aggregate: (args: unknown) => Promise<unknown>;
+  };
+  reviews: {
+    findUnique: (args: unknown) => Promise<unknown>;
+    create: (args: unknown) => Promise<unknown>;
+    findMany: (args: unknown) => Promise<unknown>;
+    update: (args: unknown) => Promise<unknown>;
+    delete: (args: unknown) => Promise<unknown>;
+    count: (args: unknown) => Promise<unknown>;
+    aggregate: (args: unknown) => Promise<unknown>;
+  };
+  payment: {
+    findUnique: (args: unknown) => Promise<unknown>;
+    create: (args: unknown) => Promise<unknown>;
+    findMany: (args: unknown) => Promise<unknown>;
+    update: (args: unknown) => Promise<unknown>;
+    delete: (args: unknown) => Promise<unknown>;
+    count: (args: unknown) => Promise<unknown>;
+    aggregate: (args: unknown) => Promise<unknown>;
   };
 }
 
@@ -26,6 +68,125 @@ const buildSafeMock: BuildSafeDatabase = {
       createdAt: new Date('2024-01-01'),
       updatedAt: new Date('2024-01-01'),
     }),
+    findMany: async () => [],
+    update: async () => ({}),
+    delete: async () => ({}),
+    count: async () => 0,
+    groupBy: async () => [],
+  },
+  room: {
+    findUnique: async () => ({
+      id: 'room-safe-id',
+      number: '101',
+      type: 'SINGLE',
+      capacity: 2,
+      price: 100,
+      status: 'AVAILABLE',
+      description: 'Build safe room',
+      createdAt: new Date('2024-01-01'),
+      updatedAt: new Date('2024-01-01'),
+    }),
+    create: async () => ({
+      id: 'room-safe-id',
+      number: '101',
+      type: 'SINGLE',
+      capacity: 2,
+      price: 100,
+      status: 'AVAILABLE',
+      description: 'Build safe room',
+      createdAt: new Date('2024-01-01'),
+      updatedAt: new Date('2024-01-01'),
+    }),
+    findMany: async () => [],
+    update: async () => ({}),
+    delete: async () => ({}),
+    count: async () => 0,
+    groupBy: async () => [],
+  },
+  booking: {
+    findUnique: async () => ({
+      id: 'booking-safe-id',
+      roomId: 'room-safe-id',
+      userId: 'build-safe-id',
+      checkIn: new Date('2024-01-01'),
+      checkOut: new Date('2024-01-03'),
+      totalPrice: 200,
+      status: 'PENDING',
+      createdAt: new Date('2024-01-01'),
+      updatedAt: new Date('2024-01-01'),
+    }),
+    create: async () => ({
+      id: 'booking-safe-id',
+      roomId: 'room-safe-id',
+      userId: 'build-safe-id',
+      checkIn: new Date('2024-01-01'),
+      checkOut: new Date('2024-01-03'),
+      totalPrice: 200,
+      status: 'PENDING',
+      createdAt: new Date('2024-01-01'),
+      updatedAt: new Date('2024-01-01'),
+    }),
+    findMany: async () => [],
+    update: async () => ({}),
+    delete: async () => ({}),
+    count: async () => 0,
+    aggregate: async () => ({ _sum: { totalPrice: 0 }, _avg: { totalPrice: 0 } }),
+  },
+  reviews: {
+    findUnique: async () => ({
+      id: 'review-safe-id',
+      roomId: 'room-safe-id',
+      userId: 'build-safe-id',
+      rating: 5,
+      comment: 'Build safe review',
+      status: 'APPROVED',
+      createdAt: new Date('2024-01-01'),
+      updatedAt: new Date('2024-01-01'),
+    }),
+    create: async () => ({
+      id: 'review-safe-id',
+      roomId: 'room-safe-id',
+      userId: 'build-safe-id',
+      rating: 5,
+      comment: 'Build safe review',
+      status: 'APPROVED',
+      createdAt: new Date('2024-01-01'),
+      updatedAt: new Date('2024-01-01'),
+    }),
+    findMany: async () => [],
+    update: async () => ({}),
+    delete: async () => ({}),
+    count: async () => 0,
+    aggregate: async () => ({ _sum: { rating: 0 }, _avg: { rating: 0 } }),
+  },
+  payment: {
+    findUnique: async () => ({
+      id: 'payment-safe-id',
+      bookingId: 'booking-safe-id',
+      amount: 200,
+      paymentMethod: 'credit_card',
+      status: 'completed',
+      transactionId: 'txn-safe-id',
+      processedAt: new Date('2024-01-01'),
+      createdAt: new Date('2024-01-01'),
+      updatedAt: new Date('2024-01-01'),
+    }),
+    create: async () => ({
+      id: 'payment-safe-id',
+      bookingId: 'booking-safe-id',
+      amount: 200,
+      paymentMethod: 'credit_card',
+      status: 'completed',
+      transactionId: 'txn-safe-id',
+      processedAt: new Date('2024-01-01'),
+      createdAt: new Date('2024-01-01'),
+      updatedAt: new Date('2024-01-01'),
+    }),
+    findMany: async () => [],
+    update: async () => ({}),
+    delete: async () => ({}),
+    count: async () => 0,
+    aggregate: async () => ({ _sum: { amount: 0 }, _avg: { amount: 0 } }),
   },
 };
 

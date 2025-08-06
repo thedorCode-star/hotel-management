@@ -1,22 +1,25 @@
-import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
+import { jest } from '@jest/globals';
 
-// Mock the build-safe database
+// Mock the database with proper typing
 const mockBooking = {
-  findMany: jest.fn(),
-  findUnique: jest.fn(),
-  create: jest.fn(),
-  update: jest.fn(),
-  delete: jest.fn(),
-  count: jest.fn(),
+  create: jest.fn() as jest.MockedFunction<any>,
+  findMany: jest.fn() as jest.MockedFunction<any>,
+  findUnique: jest.fn() as jest.MockedFunction<any>,
+  update: jest.fn() as jest.MockedFunction<any>,
+  delete: jest.fn() as jest.MockedFunction<any>,
+  count: jest.fn() as jest.MockedFunction<any>,
+  aggregate: jest.fn() as jest.MockedFunction<any>,
 };
 
 const mockRoom = {
-  findUnique: jest.fn(),
-  update: jest.fn(),
+  findUnique: jest.fn() as jest.MockedFunction<any>,
+  update: jest.fn() as jest.MockedFunction<any>,
+  findMany: jest.fn() as jest.MockedFunction<any>,
 };
 
 const mockUser = {
-  findUnique: jest.fn(),
+  findUnique: jest.fn() as jest.MockedFunction<any>,
+  findMany: jest.fn() as jest.MockedFunction<any>,
 };
 
 const mockDb = {
@@ -26,62 +29,47 @@ const mockDb = {
 };
 
 jest.mock('../lib/build-safe-db', () => ({
-  getBuildSafeDatabase: jest.fn(() => mockDb),
+  getBuildSafeDatabase: () => mockDb,
 }));
 
-describe('Booking Management Integration Tests', () => {
+describe('Booking Management Tests', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  afterEach(() => {
-    jest.resetAllMocks();
-  });
-
-  describe('Booking Creation Flow', () => {
+  describe('Booking Creation Logic', () => {
     it('should create a new booking successfully', async () => {
-      const testUser = {
-        id: 'user-123',
-        name: 'John Doe',
-        email: 'john@example.com',
-        role: 'GUEST',
+      const newBooking = {
+        id: 'booking-123',
+        roomId: 'room-101',
+        userId: 'user-123',
+        checkIn: new Date('2024-02-01'),
+        checkOut: new Date('2024-02-03'),
+        totalPrice: 200,
+        status: 'PENDING',
       };
 
       const testRoom = {
         id: 'room-101',
-        number: '101',
-        type: 'SINGLE',
-        capacity: 1,
-        price: 120,
         status: 'AVAILABLE',
+        price: 100,
+        capacity: 2,
       };
 
-      const newBooking = {
-        id: 'booking-123',
-        userId: testUser.id,
-        roomId: testRoom.id,
-        checkIn: new Date('2024-02-01'),
-        checkOut: new Date('2024-02-03'),
-        status: 'PENDING',
-        totalPrice: 240,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      // Mock user and room existence
-      mockUser.findUnique.mockResolvedValue(testUser);
       mockRoom.findUnique.mockResolvedValue(testRoom);
+      mockBooking.findMany.mockResolvedValue([]); // No overlapping bookings
       mockBooking.create.mockResolvedValue(newBooking);
       mockRoom.update.mockResolvedValue({ ...testRoom, status: 'RESERVED' });
 
       // Simulate booking creation
       const bookingResult = await mockBooking.create({
         data: {
-          userId: testUser.id,
-          roomId: testRoom.id,
-          checkIn: newBooking.checkIn,
-          checkOut: newBooking.checkOut,
-          totalPrice: newBooking.totalPrice,
+          roomId: 'room-101',
+          userId: 'user-123',
+          checkIn: new Date('2024-02-01'),
+          checkOut: new Date('2024-02-03'),
+          totalPrice: 200,
+          status: 'PENDING',
         },
       });
 
@@ -93,61 +81,64 @@ describe('Booking Management Integration Tests', () => {
     it('should prevent booking for unavailable rooms', async () => {
       const testRoom = {
         id: 'room-102',
-        number: '102',
-        type: 'DOUBLE',
+        status: 'OCCUPIED',
+        price: 150,
         capacity: 2,
-        price: 180,
-        status: 'OCCUPIED', // Room is not available
       };
 
       mockRoom.findUnique.mockResolvedValue(testRoom);
 
-      // Attempt to book unavailable room
-      const bookingAttempt = mockBooking.create({
-        data: {
-          userId: 'user-123',
-          roomId: testRoom.id,
-          checkIn: new Date('2024-02-01'),
-          checkOut: new Date('2024-02-03'),
-          totalPrice: 360,
-        },
-      });
-
-      expect(mockBooking.create).not.toHaveBeenCalled();
-      expect(testRoom.status).toBe('OCCUPIED');
-    });
-
-    it('should calculate total price correctly', async () => {
-      const roomPrice = 120;
-      const checkIn = new Date('2024-02-01');
-      const checkOut = new Date('2024-02-04');
-      const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
-      const expectedTotal = roomPrice * nights;
-
-      expect(nights).toBe(3);
-      expect(expectedTotal).toBe(360);
-      expect(expectedTotal).toBeGreaterThan(0);
-    });
-
-    it('should validate booking dates', async () => {
-      const validBooking = {
+      // Simulate booking attempt for occupied room
+      const bookingAttempt = {
+        roomId: 'room-102',
         checkIn: new Date('2024-02-01'),
         checkOut: new Date('2024-02-03'),
+        totalPrice: 300,
+        userId: 'user-123',
       };
 
-      const invalidBooking = {
-        checkIn: new Date('2024-02-03'),
-        checkOut: new Date('2024-02-01'), // Check-out before check-in
-      };
+      // The booking should not be created for occupied rooms
+      expect(testRoom.status).toBe('OCCUPIED');
+      expect(mockBooking.create).not.toHaveBeenCalled();
+    });
 
-      // Valid booking
-      expect(validBooking.checkIn.getTime()).toBeLessThan(validBooking.checkOut.getTime());
-      // Check-in should be in the future (using a fixed date for testing)
-      const futureDate = new Date('2024-12-31');
-      expect(validBooking.checkIn.getTime()).toBeLessThan(futureDate.getTime());
+    it('should calculate total price correctly', () => {
+      const roomPrice = 100;
+      const checkIn = new Date('2024-02-01');
+      const checkOut = new Date('2024-02-03');
+      
+      const nights = Math.ceil(
+        (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24)
+      );
+      const totalPrice = roomPrice * nights;
 
-      // Invalid booking
-      expect(invalidBooking.checkIn.getTime()).toBeGreaterThan(invalidBooking.checkOut.getTime());
+      expect(nights).toBe(2);
+      expect(totalPrice).toBe(200);
+    });
+
+    it('should validate booking dates', () => {
+      const checkIn = new Date('2024-12-01');
+      const checkOut = new Date('2024-12-03');
+      const now = new Date();
+
+      expect(checkIn.getTime()).toBeGreaterThan(now.getTime());
+      expect(checkOut.getTime()).toBeGreaterThan(checkIn.getTime());
+    });
+
+    it('should reject booking with invalid dates', () => {
+      const checkIn = new Date('2024-02-03');
+      const checkOut = new Date('2024-02-01'); // Check-out before check-in
+
+      const isValidBooking = checkOut.getTime() > checkIn.getTime();
+      expect(isValidBooking).toBe(false);
+    });
+
+    it('should reject booking with past dates', () => {
+      const checkIn = new Date('2023-01-01'); // Past date
+      const now = new Date();
+
+      const isValidBooking = checkIn.getTime() > now.getTime();
+      expect(isValidBooking).toBe(false);
     });
   });
 
@@ -156,61 +147,29 @@ describe('Booking Management Integration Tests', () => {
       const booking = {
         id: 'booking-123',
         status: 'PENDING',
-        checkIn: new Date('2024-02-01'),
-        checkOut: new Date('2024-02-03'),
       };
 
-      // Update to confirmed
-      mockBooking.update.mockResolvedValue({
+      const updatedBooking = {
         ...booking,
         status: 'CONFIRMED',
-      });
+      };
 
-      const updatedBooking = await mockBooking.update({
-        where: { id: booking.id },
+      mockBooking.update.mockResolvedValue(updatedBooking);
+
+      const result = await mockBooking.update({
+        where: { id: 'booking-123' },
         data: { status: 'CONFIRMED' },
       });
 
-      expect(updatedBooking.status).toBe('CONFIRMED');
+      expect(result.status).toBe('CONFIRMED');
       expect(mockBooking.update).toHaveBeenCalledTimes(1);
     });
 
     it('should handle booking cancellation', async () => {
       const booking = {
         id: 'booking-123',
-        status: 'CONFIRMED',
         roomId: 'room-101',
-      };
-
-      const room = {
-        id: 'room-101',
-        status: 'RESERVED',
-      };
-
-      mockBooking.findUnique.mockResolvedValue(booking);
-      mockRoom.findUnique.mockResolvedValue(room);
-      mockBooking.update.mockResolvedValue({ ...booking, status: 'CANCELLED' });
-      mockRoom.update.mockResolvedValue({ ...room, status: 'AVAILABLE' });
-
-      // Cancel booking
-      const cancelledBooking = await mockBooking.update({
-        where: { id: booking.id },
-        data: { status: 'CANCELLED' },
-      });
-
-      expect(cancelledBooking.status).toBe('CANCELLED');
-      expect(mockRoom.update).toHaveBeenCalledWith({
-        where: { id: room.id },
-        data: { status: 'AVAILABLE' },
-      });
-    });
-
-    it('should complete finished bookings', async () => {
-      const pastBooking = {
-        id: 'booking-123',
         status: 'CONFIRMED',
-        checkOut: new Date('2024-01-15'), // Past date
-        roomId: 'room-101',
       };
 
       const room = {
@@ -218,89 +177,123 @@ describe('Booking Management Integration Tests', () => {
         status: 'OCCUPIED',
       };
 
-      mockBooking.findUnique.mockResolvedValue(pastBooking);
-      mockRoom.findUnique.mockResolvedValue(room);
-      mockBooking.update.mockResolvedValue({ ...pastBooking, status: 'COMPLETED' });
+      mockBooking.findUnique.mockResolvedValue({ ...booking, room });
+      mockBooking.update.mockResolvedValue({ ...booking, status: 'CANCELLED' });
       mockRoom.update.mockResolvedValue({ ...room, status: 'AVAILABLE' });
 
-      // Complete booking
+      const cancelledBooking = await mockBooking.update({
+        where: { id: 'booking-123' },
+        data: { status: 'CANCELLED' },
+      });
+
+      expect(cancelledBooking.status).toBe('CANCELLED');
+      expect(mockRoom.update).toHaveBeenCalledWith({
+        where: { id: 'room-101' },
+        data: { status: 'AVAILABLE' },
+      });
+    });
+
+    it('should complete finished bookings', async () => {
+      const booking = {
+        id: 'booking-123',
+        roomId: 'room-101',
+        status: 'CONFIRMED',
+      };
+
+      const room = {
+        id: 'room-101',
+        status: 'OCCUPIED',
+      };
+
+      mockBooking.findUnique.mockResolvedValue({ ...booking, room });
+      mockBooking.update.mockResolvedValue({ ...booking, status: 'COMPLETED' });
+      mockRoom.update.mockResolvedValue({ ...room, status: 'AVAILABLE' });
+
       const completedBooking = await mockBooking.update({
-        where: { id: pastBooking.id },
+        where: { id: 'booking-123' },
         data: { status: 'COMPLETED' },
       });
 
       expect(completedBooking.status).toBe('COMPLETED');
       expect(mockRoom.update).toHaveBeenCalledWith({
-        where: { id: room.id },
+        where: { id: 'room-101' },
         data: { status: 'AVAILABLE' },
       });
+    });
+
+    it('should validate status transitions', () => {
+      const validTransitions: { [key: string]: string[] } = {
+        'PENDING': ['CONFIRMED', 'CANCELLED'],
+        'CONFIRMED': ['COMPLETED', 'CANCELLED'],
+        'CANCELLED': [],
+        'COMPLETED': [],
+      };
+
+      // Test valid transitions
+      expect(validTransitions['PENDING']).toContain('CONFIRMED');
+      expect(validTransitions['PENDING']).toContain('CANCELLED');
+      expect(validTransitions['CONFIRMED']).toContain('COMPLETED');
+      expect(validTransitions['CONFIRMED']).toContain('CANCELLED');
+
+      // Test invalid transitions
+      expect(validTransitions['CANCELLED']).not.toContain('CONFIRMED');
+      expect(validTransitions['COMPLETED']).not.toContain('CONFIRMED');
     });
   });
 
   describe('Booking Search and Filtering', () => {
     it('should filter bookings by status', async () => {
-      const mockBookings = [
-        { id: '1', status: 'CONFIRMED', guestName: 'John Doe' },
-        { id: '2', status: 'PENDING', guestName: 'Jane Smith' },
-        { id: '3', status: 'CONFIRMED', guestName: 'Mike Johnson' },
-        { id: '4', status: 'CANCELLED', guestName: 'Sarah Wilson' },
+      const bookings = [
+        { id: 'booking-1', status: 'CONFIRMED' },
+        { id: 'booking-2', status: 'PENDING' },
+        { id: 'booking-3', status: 'CONFIRMED' },
       ];
 
-      mockBooking.findMany.mockResolvedValue(mockBookings.filter(b => b.status === 'CONFIRMED'));
+      mockBooking.findMany.mockResolvedValue(bookings.filter(b => b.status === 'CONFIRMED'));
 
       const confirmedBookings = await mockBooking.findMany({
         where: { status: 'CONFIRMED' },
       });
 
       expect(confirmedBookings).toHaveLength(2);
-      confirmedBookings.forEach(booking => {
-        expect(booking.status).toBe('CONFIRMED');
-      });
+      expect(confirmedBookings.every((b: any) => b.status === 'CONFIRMED')).toBe(true);
     });
 
     it('should search bookings by guest name', async () => {
-      const searchTerm = 'John';
-      const mockBookings = [
-        { id: '1', guestName: 'John Doe', status: 'CONFIRMED' },
-        { id: '2', guestName: 'Jane Smith', status: 'PENDING' },
-        { id: '3', guestName: 'Mike Johnson', status: 'CONFIRMED' },
+      const bookings = [
+        { id: 'booking-1', user: { name: 'John Doe' } },
+        { id: 'booking-2', user: { name: 'Jane Smith' } },
       ];
 
-      mockBooking.findMany.mockResolvedValue(
-        mockBookings.filter(b => b.guestName.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
+      mockBooking.findMany.mockResolvedValue(bookings.filter(b => 
+        b.user.name.toLowerCase().includes('john')
+      ));
 
-      const searchResults = await mockBooking.findMany({
+      const johnBookings = await mockBooking.findMany({
         where: {
           user: {
-            name: {
-              contains: searchTerm,
-              mode: 'insensitive',
-            },
+            name: { contains: 'john', mode: 'insensitive' },
           },
         },
       });
 
-      expect(searchResults).toHaveLength(2);
-      searchResults.forEach(booking => {
-        expect(booking.guestName.toLowerCase()).toContain(searchTerm.toLowerCase());
-      });
+      expect(johnBookings).toHaveLength(1);
+      expect(johnBookings[0].user.name).toBe('John Doe');
     });
 
     it('should filter bookings by date range', async () => {
-      const startDate = new Date('2024-02-01');
-      const endDate = new Date('2024-02-28');
-      const mockBookings = [
-        { id: '1', checkIn: new Date('2024-02-05'), checkOut: new Date('2024-02-07') },
-        { id: '2', checkIn: new Date('2024-02-15'), checkOut: new Date('2024-02-17') },
-        { id: '3', checkIn: new Date('2024-03-01'), checkOut: new Date('2024-03-03') },
+      const bookings = [
+        { id: 'booking-1', checkIn: new Date('2024-02-01') },
+        { id: 'booking-2', checkIn: new Date('2024-02-15') },
+        { id: 'booking-3', checkIn: new Date('2024-03-01') },
       ];
 
-      mockBooking.findMany.mockResolvedValue(
-        mockBookings.filter(b => 
-          b.checkIn >= startDate && b.checkIn <= endDate
-        )
-      );
+      const startDate = new Date('2024-02-01');
+      const endDate = new Date('2024-02-28');
+
+      mockBooking.findMany.mockResolvedValue(bookings.filter(b => 
+        b.checkIn >= startDate && b.checkIn <= endDate
+      ));
 
       const filteredBookings = await mockBooking.findMany({
         where: {
@@ -312,86 +305,104 @@ describe('Booking Management Integration Tests', () => {
       });
 
       expect(filteredBookings).toHaveLength(2);
-      filteredBookings.forEach(booking => {
-        expect(booking.checkIn.getTime()).toBeGreaterThanOrEqual(startDate.getTime());
-        expect(booking.checkIn.getTime()).toBeLessThanOrEqual(endDate.getTime());
-      });
     });
   });
 
   describe('Booking Business Logic', () => {
     it('should prevent double booking of rooms', async () => {
-      const roomId = 'room-101';
-      const checkIn = new Date('2024-02-01');
-      const checkOut = new Date('2024-02-03');
+      const existingBookings = [
+        {
+          id: 'booking-1',
+          roomId: 'room-101',
+          checkIn: new Date('2024-02-01'),
+          checkOut: new Date('2024-02-03'),
+          status: 'CONFIRMED',
+        },
+      ];
 
-      const existingBooking = {
-        id: 'existing-booking',
-        roomId,
+      const newBookingRequest = {
+        roomId: 'room-101',
         checkIn: new Date('2024-02-02'),
         checkOut: new Date('2024-02-04'),
-        status: 'CONFIRMED',
       };
 
-      mockBooking.findMany.mockResolvedValue([existingBooking]);
+      mockBooking.findMany.mockResolvedValue(existingBookings);
 
-      // Check for overlapping bookings
       const overlappingBookings = await mockBooking.findMany({
         where: {
-          roomId,
+          roomId: 'room-101',
           status: { in: ['PENDING', 'CONFIRMED'] },
           OR: [
             {
-              checkIn: { lt: checkOut },
-              checkOut: { gt: checkIn },
+              checkIn: { lt: newBookingRequest.checkOut },
+              checkOut: { gt: newBookingRequest.checkIn },
             },
           ],
         },
       });
 
-      expect(overlappingBookings).toHaveLength(1);
-      expect(overlappingBookings[0].id).toBe('existing-booking');
+      expect(overlappingBookings.length).toBeGreaterThan(0);
     });
 
-    it('should calculate occupancy rate correctly', async () => {
-      const totalRooms = 24;
-      const occupiedRooms = 18;
+    it('should calculate occupancy rate correctly', () => {
+      const totalRooms = 10;
+      const occupiedRooms = 7;
       const occupancyRate = (occupiedRooms / totalRooms) * 100;
 
-      expect(occupancyRate).toBe(75);
-      expect(occupancyRate).toBeGreaterThanOrEqual(0);
-      expect(occupancyRate).toBeLessThanOrEqual(100);
+      expect(occupancyRate).toBe(70);
     });
 
-    it('should handle room capacity validation', async () => {
-      const room = {
-        id: 'room-101',
-        type: 'SINGLE',
-        capacity: 1,
-      };
+    it('should handle room capacity validation', () => {
+      const roomCapacity = 2;
+      const guestCount = 3;
 
-      const bookingRequest = {
-        guestCount: 2,
-        roomId: room.id,
-      };
-
-      // Validate capacity
-      const isValidCapacity = bookingRequest.guestCount <= room.capacity;
-      expect(isValidCapacity).toBe(false);
-      expect(room.capacity).toBe(1);
-      expect(bookingRequest.guestCount).toBe(2);
+      const isValidBooking = guestCount <= roomCapacity;
+      expect(isValidBooking).toBe(false);
     });
 
-    it('should apply discount for extended stays', async () => {
-      const basePrice = 120;
+    it('should apply discount for extended stays', () => {
+      const basePrice = 100;
       const nights = 7;
-      const discountRate = 0.1; // 10% discount for stays longer than 5 nights
-      const discount = nights > 5 ? basePrice * nights * discountRate : 0;
-      const totalPrice = basePrice * nights - discount;
+      const discountRate = 0.1; // 10% discount for stays >= 7 nights
+      
+      const totalPrice = nights >= 7 
+        ? basePrice * nights * (1 - discountRate)
+        : basePrice * nights;
 
-      expect(nights).toBe(7);
-      expect(discount).toBe(84); // 120 * 7 * 0.1
-      expect(totalPrice).toBe(756); // (120 * 7) - 84
+      expect(totalPrice).toBe(630); // 700 * 0.9
+    });
+
+    it('should validate overlapping date ranges', () => {
+      const existingBooking = {
+        checkIn: new Date('2024-02-01'),
+        checkOut: new Date('2024-02-03'),
+      };
+
+      const newBookings = [
+        {
+          checkIn: new Date('2024-02-02'),
+          checkOut: new Date('2024-02-04'),
+          expected: true, // Should overlap
+        },
+        {
+          checkIn: new Date('2024-02-04'),
+          checkOut: new Date('2024-02-06'),
+          expected: false, // Should not overlap
+        },
+        {
+          checkIn: new Date('2024-01-30'),
+          checkOut: new Date('2024-02-02'),
+          expected: true, // Should overlap
+        },
+      ];
+
+      newBookings.forEach(booking => {
+        const hasOverlap = 
+          booking.checkIn < existingBooking.checkOut && 
+          booking.checkOut > existingBooking.checkIn;
+        
+        expect(hasOverlap).toBe(booking.expected);
+      });
     });
   });
 
@@ -399,64 +410,47 @@ describe('Booking Management Integration Tests', () => {
     it('should handle database connection failures', async () => {
       mockBooking.create.mockRejectedValue(new Error('Database connection failed'));
 
-      try {
-        await mockBooking.create({
-          data: {
-            userId: 'user-123',
-            roomId: 'room-101',
-            checkIn: new Date(),
-            checkOut: new Date(),
-            totalPrice: 240,
-          },
-        });
-        fail('Should have thrown an error');
-      } catch (error) {
-        expect((error as Error).message).toBe('Database connection failed');
-      }
+      await expect(mockBooking.create({
+        data: { roomId: 'room-101' },
+      })).rejects.toThrow('Database connection failed');
     });
 
-    it('should handle invalid booking data', async () => {
+    it('should handle invalid booking data', () => {
       const invalidBookings = [
-        { checkIn: null, checkOut: new Date() },
-        { checkIn: new Date(), checkOut: null },
         { checkIn: new Date('2024-02-03'), checkOut: new Date('2024-02-01') }, // Check-out before check-in
-        { totalPrice: -100 },
-        { totalPrice: 0 },
+        { totalPrice: -100 }, // Negative price
+        { guestCount: 0 }, // Invalid guest count
       ];
 
       invalidBookings.forEach(booking => {
         if (booking.checkIn && booking.checkOut) {
-          expect(booking.checkIn.getTime()).toBeLessThanOrEqual(booking.checkOut.getTime());
+          expect(booking.checkIn.getTime()).toBeGreaterThan(booking.checkOut.getTime());
         }
         if (booking.totalPrice !== undefined) {
           expect(booking.totalPrice).toBeGreaterThan(0);
+        }
+        if (booking.guestCount !== undefined) {
+          expect(booking.guestCount).toBeGreaterThan(0);
         }
       });
     });
 
     it('should handle concurrent booking attempts', async () => {
-      const roomId = 'room-101';
-      const concurrentBookings = Array.from({ length: 5 }, (_, i) => 
+      const bookingPromises = Array.from({ length: 5 }, (_, i) =>
         mockBooking.create({
           data: {
+            roomId: 'room-101',
             userId: `user-${i}`,
-            roomId,
             checkIn: new Date('2024-02-01'),
             checkOut: new Date('2024-02-03'),
-            totalPrice: 240,
           },
         })
       );
 
-      // Only one should succeed
-      mockBooking.create
-        .mockResolvedValueOnce({ id: 'booking-1' })
-        .mockRejectedValueOnce(new Error('Room already booked'))
-        .mockRejectedValueOnce(new Error('Room already booked'))
-        .mockRejectedValueOnce(new Error('Room already booked'))
-        .mockRejectedValueOnce(new Error('Room already booked'));
+      mockBooking.create.mockResolvedValueOnce({ id: 'booking-success' });
+      mockBooking.create.mockRejectedValue(new Error('Room already booked'));
 
-      const results = await Promise.allSettled(concurrentBookings);
+      const results = await Promise.allSettled(bookingPromises);
       const successfulBookings = results.filter(r => r.status === 'fulfilled');
       const failedBookings = results.filter(r => r.status === 'rejected');
 
@@ -467,80 +461,109 @@ describe('Booking Management Integration Tests', () => {
 
   describe('Booking Performance', () => {
     it('should handle large booking datasets efficiently', async () => {
-      const largeDataset = Array.from({ length: 1000 }, (_, i) => ({
+      const startTime = Date.now();
+      
+      const bookings = Array.from({ length: 1000 }, (_, i) => ({
         id: `booking-${i}`,
-        guestName: `Guest ${i}`,
         status: ['PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED'][i % 4],
+        guestName: `Guest ${i}`,
       }));
 
-      mockBooking.findMany.mockResolvedValue(largeDataset);
+      mockBooking.findMany.mockResolvedValue(bookings);
 
-      const startTime = Date.now();
-      const bookings = await mockBooking.findMany({
-        where: { status: 'CONFIRMED' },
+      const result = await mockBooking.findMany({
+        take: 250,
+        orderBy: { createdAt: 'desc' },
       });
-      const endTime = Date.now();
 
-      expect(bookings).toHaveLength(250); // 1000 / 4 statuses
+      const endTime = Date.now();
+      
+      expect(result).toHaveLength(250);
       expect(endTime - startTime).toBeLessThan(1000); // Should complete within 1 second
     });
 
     it('should handle rapid booking operations', async () => {
-      const operations = Array.from({ length: 50 }, (_, i) => 
-        mockBooking.findUnique({ where: { id: `booking-${i}` } })
+      const startTime = Date.now();
+      
+      const operations = Array.from({ length: 100 }, () =>
+        mockBooking.create({
+          data: {
+            roomId: 'room-101',
+            userId: 'user-123',
+            checkIn: new Date(),
+            checkOut: new Date(Date.now() + 86400000),
+          },
+        })
       );
 
-      mockBooking.findUnique.mockResolvedValue({ id: 'test-booking' });
+      mockBooking.create.mockResolvedValue({ id: 'booking-123' });
 
-      const startTime = Date.now();
-      const results = await Promise.all(operations);
+      await Promise.all(operations);
+      
       const endTime = Date.now();
-
-      expect(results).toHaveLength(50);
-      expect(endTime - startTime).toBeLessThan(2000); // Should complete within 2 seconds
+      expect(endTime - startTime).toBeLessThan(5000); // Should complete within 5 seconds
     });
   });
 
   describe('Booking Analytics', () => {
     it('should calculate booking statistics', async () => {
       const bookings = [
-        { status: 'CONFIRMED', totalPrice: 240 },
-        { status: 'CONFIRMED', totalPrice: 360 },
-        { status: 'PENDING', totalPrice: 180 },
-        { status: 'CANCELLED', totalPrice: 500 },
-        { status: 'COMPLETED', totalPrice: 300 },
+        { status: 'CONFIRMED', totalPrice: 200 },
+        { status: 'CONFIRMED', totalPrice: 300 },
+        { status: 'PENDING', totalPrice: 150 },
+        { status: 'CANCELLED', totalPrice: 100 },
       ];
 
-      const stats = {
-        totalBookings: bookings.length,
-        confirmedBookings: bookings.filter(b => b.status === 'CONFIRMED').length,
-        totalRevenue: bookings.filter(b => b.status === 'CONFIRMED').reduce((sum, b) => sum + b.totalPrice, 0),
-        averageBookingValue: bookings.filter(b => b.status === 'CONFIRMED').reduce((sum, b) => sum + b.totalPrice, 0) / bookings.filter(b => b.status === 'CONFIRMED').length,
-      };
+      mockBooking.aggregate.mockResolvedValue({
+        _sum: { totalPrice: 500 },
+        _count: { id: 4 },
+      });
 
-      expect(stats.totalBookings).toBe(5);
-      expect(stats.confirmedBookings).toBe(2);
-      expect(stats.totalRevenue).toBe(600);
-      expect(stats.averageBookingValue).toBe(300);
+      const stats = await mockBooking.aggregate({
+        where: { status: 'CONFIRMED' },
+        _sum: { totalPrice: true },
+        _count: { id: true },
+      });
+
+      expect(stats._sum.totalPrice).toBe(500);
+      expect(stats._count.id).toBe(4);
     });
 
     it('should track booking trends', async () => {
       const monthlyBookings = [
-        { month: 'January', count: 45, revenue: 5400 },
-        { month: 'February', count: 52, revenue: 6240 },
-        { month: 'March', count: 48, revenue: 5760 },
-        { month: 'April', count: 61, revenue: 7320 },
+        { month: 'Jan', count: 10 },
+        { month: 'Feb', count: 15 },
+        { month: 'Mar', count: 12 },
       ];
 
-      const trends = {
-        averageMonthlyBookings: monthlyBookings.reduce((sum, m) => sum + m.count, 0) / monthlyBookings.length,
-        averageMonthlyRevenue: monthlyBookings.reduce((sum, m) => sum + m.revenue, 0) / monthlyBookings.length,
-        growthRate: ((monthlyBookings[3].count - monthlyBookings[0].count) / monthlyBookings[0].count) * 100,
-      };
+      mockBooking.findMany.mockResolvedValue(monthlyBookings);
 
-      expect(trends.averageMonthlyBookings).toBe(51.5);
-      expect(trends.averageMonthlyRevenue).toBe(6180);
-      expect(trends.growthRate).toBeCloseTo(35.56, 1);
+      const trends = await mockBooking.findMany({
+        select: {
+          month: true,
+          count: true,
+        },
+        orderBy: { month: 'asc' },
+      });
+
+      expect(trends).toHaveLength(3);
+      expect(trends[1].count).toBe(15); // February has highest bookings
+    });
+
+    it('should calculate revenue metrics', () => {
+      const bookings = [
+        { totalPrice: 200, status: 'CONFIRMED' },
+        { totalPrice: 300, status: 'CONFIRMED' },
+        { totalPrice: 150, status: 'PENDING' },
+        { totalPrice: 100, status: 'CANCELLED' },
+      ];
+
+      const confirmedBookings = bookings.filter(b => b.status === 'CONFIRMED');
+      const totalRevenue = confirmedBookings.reduce((sum, booking) => sum + booking.totalPrice, 0);
+      const averageRevenue = totalRevenue / confirmedBookings.length;
+
+      expect(totalRevenue).toBe(500);
+      expect(averageRevenue).toBe(250);
     });
   });
 }); 

@@ -30,8 +30,21 @@ export default function BookingForm({ booking, mode, onClose }: BookingFormProps
   const [rooms, setRooms] = useState<Room[]>([]);
   const [formData, setFormData] = useState({
     roomId: booking?.roomId || '',
-    checkIn: booking?.checkIn ? new Date(booking.checkIn).toISOString().split('T')[0] : '',
-    checkOut: booking?.checkOut ? new Date(booking.checkOut).toISOString().split('T')[0] : '',
+    checkIn: booking?.checkIn ? new Date(booking.checkIn).toISOString().split('T')[0] : (() => {
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const day = String(today.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    })(),
+    checkOut: booking?.checkOut ? new Date(booking.checkOut).toISOString().split('T')[0] : (() => {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const year = tomorrow.getFullYear();
+      const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
+      const day = String(tomorrow.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    })(),
     guestCount: booking?.guestCount || 1,
     status: booking?.status || 'PENDING',
   });
@@ -64,22 +77,26 @@ export default function BookingForm({ booking, mode, onClose }: BookingFormProps
       newErrors.roomId = 'Please select a room';
     }
 
-    if (!formData.checkIn) {
+    if (!formData.checkIn || formData.checkIn.trim() === '') {
       newErrors.checkIn = 'Check-in date is required';
     }
 
-    if (!formData.checkOut) {
+    if (!formData.checkOut || formData.checkOut.trim() === '') {
       newErrors.checkOut = 'Check-out date is required';
     }
 
-    if (formData.checkIn && formData.checkOut) {
-      const checkInDate = new Date(formData.checkIn);
-      const checkOutDate = new Date(formData.checkOut);
+    if (formData.checkIn && formData.checkOut && formData.checkIn.trim() !== '' && formData.checkOut.trim() !== '') {
+      const checkInDate = new Date(formData.checkIn + 'T00:00:00');
+      const checkOutDate = new Date(formData.checkOut + 'T00:00:00');
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      if (checkInDate < today) {
-        newErrors.checkIn = 'Check-in date must be in the future';
+      // Allow same-day bookings but ensure check-in is not in the past
+      const checkInDay = new Date(checkInDate);
+      checkInDay.setHours(0, 0, 0, 0);
+
+      if (checkInDay < today) {
+        newErrors.checkIn = 'Check-in date cannot be in the past';
       }
 
       if (checkOutDate <= checkInDate) {
@@ -123,6 +140,7 @@ export default function BookingForm({ booking, mode, onClose }: BookingFormProps
 
       if (!response.ok) {
         const errorData = await response.json();
+        console.log('API error response:', errorData); // Debug log
         throw new Error(errorData.error || 'Failed to save booking');
       }
 
@@ -215,7 +233,13 @@ export default function BookingForm({ booking, mode, onClose }: BookingFormProps
                 type="date"
                 value={formData.checkIn}
                 onChange={(e) => handleInputChange('checkIn', e.target.value)}
-                min={new Date().toISOString().split('T')[0]}
+                min={(() => {
+                  const today = new Date();
+                  const year = today.getFullYear();
+                  const month = String(today.getMonth() + 1).padStart(2, '0');
+                  const day = String(today.getDate()).padStart(2, '0');
+                  return `${year}-${month}-${day}`;
+                })()}
                 className={`w-full px-3 py-2 border rounded-md ${
                   errors.checkIn ? 'border-red-500' : 'border-gray-300'
                 } focus:outline-none focus:ring-2 focus:ring-blue-500`}
@@ -233,7 +257,13 @@ export default function BookingForm({ booking, mode, onClose }: BookingFormProps
                 type="date"
                 value={formData.checkOut}
                 onChange={(e) => handleInputChange('checkOut', e.target.value)}
-                min={formData.checkIn || new Date().toISOString().split('T')[0]}
+                min={formData.checkIn || (() => {
+                  const today = new Date();
+                  const year = today.getFullYear();
+                  const month = String(today.getMonth() + 1).padStart(2, '0');
+                  const day = String(today.getDate()).padStart(2, '0');
+                  return `${year}-${month}-${day}`;
+                })()}
                 className={`w-full px-3 py-2 border rounded-md ${
                   errors.checkOut ? 'border-red-500' : 'border-gray-300'
                 } focus:outline-none focus:ring-2 focus:ring-blue-500`}
@@ -253,7 +283,11 @@ export default function BookingForm({ booking, mode, onClose }: BookingFormProps
               min="1"
               max="10"
               value={formData.guestCount}
-              onChange={(e) => handleInputChange('guestCount', parseInt(e.target.value))}
+              onChange={(e) => {
+                const value = e.target.value;
+                const parsedValue = value === '' ? 1 : parseInt(value) || 1;
+                handleInputChange('guestCount', parsedValue);
+              }}
               className={`w-full px-3 py-2 border rounded-md ${
                 errors.guestCount ? 'border-red-500' : 'border-gray-300'
               } focus:outline-none focus:ring-2 focus:ring-blue-500`}

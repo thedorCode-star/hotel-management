@@ -66,6 +66,7 @@ model Booking {
   // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  payments Payment[]
 
   @@map("bookings")
 }
@@ -84,6 +85,25 @@ model Review {
   room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
 
   @@map("reviews")
+}
+
+model Payment {
+  id                    String    @id @default(cuid())
+  bookingId             String
+  amount                Float
+  paymentMethod         String
+  status                PaymentStatus @default(PENDING)
+  transactionId         String?
+  refundTransactionId    String?
+  processedAt           DateTime  @default(now())
+  refundedAt            DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  // Relations
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@map("payments")
 }
 
 enum UserRole {
@@ -111,4 +131,12 @@ enum BookingStatus {
   CONFIRMED
   CANCELLED
   COMPLETED
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+  CANCELLED
 }

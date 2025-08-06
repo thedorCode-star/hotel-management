@@ -1,5 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getBuildSafeDatabase } from '../../../lib/build-safe-db';
+import jwt from 'jsonwebtoken';
+
+interface JwtPayload {
+  userId: string;
+  email: string;
+  role: string;
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -87,14 +94,58 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Get authenticated user from token
+    const token = request.cookies.get("auth-token")?.value;
+    let userId: string | null = null;
+
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || "your-secret-key") as JwtPayload;
+        userId = decoded.userId;
+      } catch (error) {
+        console.error('Token verification failed:', error);
+      }
+    }
+
+    // For demo purposes, if no authenticated user, create a temporary user or use a default
+    if (!userId) {
+      // Check if there's a default user in the system
+      const defaultUser = await db.user.findMany({
+        where: { role: 'GUEST' },
+        take: 1,
+        select: { id: true }
+      }) as any[];
+      
+      if (defaultUser.length > 0) {
+        userId = defaultUser[0].id;
+      } else {
+        // Create a temporary guest user for demo purposes
+        const tempUser = await db.user.create({
+          data: {
+            email: `guest-${Date.now()}@example.com`,
+            password: 'temp-password',
+            name: 'Guest User',
+            role: 'GUEST'
+          }
+        }) as any;
+        userId = tempUser.id;
+      }
+    }
+
     const checkInDate = new Date(checkIn);
     const checkOutDate = new Date(checkOut);
     const now = new Date();
 
-    // Validate dates
-    if (checkInDate <= now) {
+    // Validate dates - allow same-day bookings but ensure check-in is not in the past
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Set to start of today
+    
+    const checkInDay = new Date(checkInDate);
+    checkInDay.setHours(0, 0, 0, 0); // Set to start of check-in day
+
+    if (checkInDay < today) {
       return NextResponse.json(
-        { error: 'Check-in date must be in the future' },
+        { error: 'Check-in date cannot be in the past' },
         { status: 400 }
       );
     }
@@ -109,7 +160,7 @@ export async function POST(request: NextRequest) {
     // Check if room exists and is available
     const room = await db.room.findUnique({
       where: { id: roomId },
-    });
+    }) as any;
 
     if (!room) {
       return NextResponse.json(
@@ -147,7 +198,7 @@ export async function POST(request: NextRequest) {
           },
         ],
       },
-    });
+    }) as any[];
 
     if (overlappingBookings.length > 0) {
       return NextResponse.json(
@@ -166,11 +217,11 @@ export async function POST(request: NextRequest) {
     const booking = await db.booking.create({
       data: {
         roomId,
+        userId: userId!,
         checkIn: checkInDate,
         checkOut: checkOutDate,
         totalPrice,
         status: 'PENDING',
-        userId: body.userId, // This should come from authenticated user
       },
       include: {
         user: {
