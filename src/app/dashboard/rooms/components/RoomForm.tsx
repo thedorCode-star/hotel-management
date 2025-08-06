@@ -93,7 +93,23 @@ export default function RoomForm({ room, mode, onClose }: RoomFormProps) {
   };
 
   const handleInputChange = (field: string, value: string | number) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    let processedValue = value;
+    
+    // Handle numeric fields to prevent NaN
+    if (field === 'price' || field === 'capacity') {
+      if (typeof value === 'string') {
+        // If the input is empty, set to appropriate default
+        if (value === '') {
+          processedValue = field === 'price' ? 0 : 1;
+        } else {
+          // Parse the number and handle NaN
+          const parsed = field === 'price' ? parseFloat(value) : parseInt(value);
+          processedValue = isNaN(parsed) ? (field === 'price' ? 0 : 1) : parsed;
+        }
+      }
+    }
+    
+    setFormData(prev => ({ ...prev, [field]: processedValue }));
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
@@ -159,7 +175,7 @@ export default function RoomForm({ room, mode, onClose }: RoomFormProps) {
               min="1"
               max="10"
               value={formData.capacity}
-              onChange={(e) => handleInputChange('capacity', parseInt(e.target.value))}
+              onChange={(e) => handleInputChange('capacity', e.target.value)}
               className={`w-full px-3 py-2 border rounded-md ${
                 errors.capacity ? 'border-red-500' : 'border-gray-300'
               } focus:outline-none focus:ring-2 focus:ring-blue-500`}
@@ -180,7 +196,7 @@ export default function RoomForm({ room, mode, onClose }: RoomFormProps) {
                 min="0"
                 step="0.01"
                 value={formData.price}
-                onChange={(e) => handleInputChange('price', parseFloat(e.target.value))}
+                onChange={(e) => handleInputChange('price', e.target.value)}
                 className={`w-full pl-8 pr-3 py-2 border rounded-md ${
                   errors.price ? 'border-red-500' : 'border-gray-300'
                 } focus:outline-none focus:ring-2 focus:ring-blue-500`}
