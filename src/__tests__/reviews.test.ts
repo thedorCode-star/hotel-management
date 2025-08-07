@@ -131,8 +131,8 @@ describe('Review System Integration Tests', () => {
       });
 
       expect(existingReviewCheck).toBeDefined();
-      expect(existingReviewCheck.userId).toBe(userId);
-      expect(existingReviewCheck.roomId).toBe(roomId);
+      expect(existingReviewCheck[0].userId).toBe(userId);
+      expect(existingReviewCheck[0].roomId).toBe(roomId);
       expect(mockReview.create).not.toHaveBeenCalled();
     });
 
@@ -546,6 +546,16 @@ describe('Review System Integration Tests', () => {
     it('should handle concurrent review submissions', async () => {
       const userId = 'user-123';
       const roomId = 'room-101';
+      
+      // Clear previous mocks and set up different results for each call
+      mockReview.create.mockClear();
+      mockReview.create
+        .mockResolvedValueOnce({ id: 'review-1' })
+        .mockRejectedValueOnce(new Error('Duplicate review'))
+        .mockRejectedValueOnce(new Error('Duplicate review'))
+        .mockRejectedValueOnce(new Error('Duplicate review'))
+        .mockRejectedValueOnce(new Error('Duplicate review'));
+
       const concurrentReviews = Array.from({ length: 5 }, (_, i) => 
         mockReview.create({
           data: {
@@ -556,14 +566,6 @@ describe('Review System Integration Tests', () => {
           },
         })
       );
-
-      // Only one should succeed (first one)
-      mockReview.create
-        .mockResolvedValueOnce({ id: 'review-1' })
-        .mockRejectedValueOnce(new Error('Duplicate review'))
-        .mockRejectedValueOnce(new Error('Duplicate review'))
-        .mockRejectedValueOnce(new Error('Duplicate review'))
-        .mockRejectedValueOnce(new Error('Duplicate review'));
 
       const results = await Promise.allSettled(concurrentReviews);
       const successfulReviews = results.filter(r => r.status === 'fulfilled');
@@ -584,7 +586,9 @@ describe('Review System Integration Tests', () => {
         roomId: `room-${i % 50}`,
       }));
 
-      mockReview.findMany.mockResolvedValue(largeDataset);
+      // Mock to return only reviews with rating >= 4 (simulating filtering)
+      const filteredReviews = largeDataset.filter(review => review.rating >= 4);
+      mockReview.findMany.mockResolvedValue(filteredReviews);
 
       const startTime = Date.now();
       const reviews = await mockReview.findMany({

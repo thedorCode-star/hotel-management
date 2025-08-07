@@ -14,11 +14,11 @@ describe('Home Page', () => {
   it('renders login and register links', () => {
     render(<HomePage />);
     
-    const signInLink = screen.getByRole('link', { name: /sign in/i });
-    const createAccountLink = screen.getByRole('link', { name: /create account/i });
+    const signInLinks = screen.getAllByRole('link', { name: /sign in/i });
+    const createAccountLinks = screen.getAllByRole('link', { name: /create account/i });
     
-    expect(signInLink).toBeTruthy();
-    expect(createAccountLink).toBeTruthy();
+    expect(signInLinks[0]).toBeTruthy();
+    expect(createAccountLinks[0]).toBeTruthy();
   });
 
   it('renders feature cards', () => {
@@ -38,11 +38,11 @@ describe('Home Page', () => {
   it('renders call-to-action buttons', () => {
     render(<HomePage />);
     
-    const viewRoomsButton = screen.getByRole('link', { name: /view rooms/i });
+    const viewRoomsLinks = screen.getAllByRole('link', { name: /view rooms/i });
     const browseRoomsButton = screen.getByRole('link', { name: /browse rooms/i });
     const getStartedButton = screen.getByRole('link', { name: /get started/i });
     
-    expect(viewRoomsButton).toBeTruthy();
+    expect(viewRoomsLinks[0]).toBeTruthy();
     expect(browseRoomsButton).toBeTruthy();
     expect(getStartedButton).toBeTruthy();
   });
