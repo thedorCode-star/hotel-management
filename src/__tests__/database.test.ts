@@ -148,10 +148,9 @@ describe('Database Integration Tests', () => {
       const user = {
         id: 'user-123',
         name: 'John Doe',
-        email: 'john@example.com',
         bookings: [
-          { id: 'booking-1', roomId: 'room-101', totalPrice: 240 },
-          { id: 'booking-2', roomId: 'room-102', totalPrice: 360 },
+          { id: 'booking-1', userId: 'user-123', roomId: 'room-101', totalPrice: 240 },
+          { id: 'booking-2', userId: 'user-123', roomId: 'room-102', totalPrice: 360 },
         ],
       };
 
@@ -173,8 +172,8 @@ describe('Database Integration Tests', () => {
         number: '101',
         type: 'SINGLE',
         bookings: [
-          { id: 'booking-1', userId: 'user-123', totalPrice: 240 },
-          { id: 'booking-2', userId: 'user-456', totalPrice: 360 },
+          { id: 'booking-1', userId: 'user-123', roomId: 'room-101', totalPrice: 240 },
+          { id: 'booking-2', userId: 'user-456', roomId: 'room-101', totalPrice: 360 },
         ],
       };
 
@@ -195,8 +194,8 @@ describe('Database Integration Tests', () => {
         id: 'user-123',
         name: 'John Doe',
         reviews: [
-          { id: 'review-1', roomId: 'room-101', rating: 4 },
-          { id: 'review-2', roomId: 'room-102', rating: 5 },
+          { id: 'review-1', userId: 'user-123', roomId: 'room-101', rating: 4 },
+          { id: 'review-2', userId: 'user-123', roomId: 'room-102', rating: 5 },
         ],
       };
 
@@ -217,8 +216,8 @@ describe('Database Integration Tests', () => {
         id: 'room-101',
         number: '101',
         reviews: [
-          { id: 'review-1', userId: 'user-123', rating: 4 },
-          { id: 'review-2', userId: 'user-456', rating: 5 },
+          { id: 'review-1', userId: 'user-123', roomId: 'room-101', rating: 4 },
+          { id: 'review-2', userId: 'user-456', roomId: 'room-101', rating: 5 },
         ],
       };
 
@@ -421,7 +420,8 @@ describe('Database Integration Tests', () => {
         name: `User ${i}`,
       }));
 
-      mockPrisma.user.findMany.mockResolvedValue(largeDataset);
+      // Mock to return only the first 1000 users (simulating pagination)
+      mockPrisma.user.findMany.mockResolvedValue(largeDataset.slice(0, 1000));
 
       const startTime = Date.now();
       const users = await mockPrisma.user.findMany({
