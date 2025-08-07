@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import BookingForm from './components/BookingForm';
+import PaymentModal from './components/PaymentModal';
+import { CreditCard, DollarSign } from 'lucide-react';
 
 interface User {
   id: string;
@@ -39,6 +41,8 @@ export default function BookingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedBookingForPayment, setSelectedBookingForPayment] = useState<Booking | null>(null);
   const [filters, setFilters] = useState({
     status: 'all',
     search: '',
@@ -139,25 +143,46 @@ export default function BookingsPage() {
   };
 
   const handleDeleteBooking = async (bookingId: string) => {
-    if (!confirm('Are you sure you want to delete this booking?')) {
-      return;
-    }
-
+    if (!confirm('Are you sure you want to delete this booking?')) return;
+    
     try {
       const response = await fetch(`/api/bookings/${bookingId}`, {
         method: 'DELETE',
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to delete booking');
+      
+      if (response.ok) {
+        fetchBookings();
+      } else {
+        setError('Failed to delete booking');
       }
-
-      await fetchBookings();
     } catch (error) {
+      setError('Failed to delete booking');
       console.error('Error deleting booking:', error);
-      alert(error instanceof Error ? error.message : 'Failed to delete booking');
     }
+  };
+
+  const handlePaymentClick = (booking: Booking) => {
+    setSelectedBookingForPayment(booking);
+    setShowPaymentModal(true);
+  };
+
+  const handlePaymentSuccess = () => {
+    fetchBookings(); // Refresh bookings to show updated status
+    setShowPaymentModal(false);
+    setSelectedBookingForPayment(null);
+  };
+
+  const checkPaymentStatus = async (bookingId: string) => {
+    try {
+      const response = await fetch(`/api/payments?bookingId=${bookingId}`);
+      if (response.ok) {
+        const data = await response.json();
+        return data.payments.length > 0;
+      }
+    } catch (error) {
+      console.error('Error checking payment status:', error);
+    }
+    return false;
   };
 
   const getStatusColor = (status: string) => {
@@ -350,6 +375,18 @@ export default function BookingsPage() {
                       >
                         Edit
                       </button>
+                      
+                      {/* Payment Button */}
+                      {booking.status === 'PENDING' && (
+                        <button
+                          onClick={() => handlePaymentClick(booking)}
+                          className="text-green-600 hover:text-green-900 flex items-center"
+                        >
+                          <CreditCard className="h-4 w-4 mr-1" />
+                          Pay
+                        </button>
+                      )}
+                      
                       {booking.status === 'PENDING' && (
                         <button
                           onClick={() => handleStatusUpdate(booking.id, 'CONFIRMED')}
@@ -406,6 +443,18 @@ export default function BookingsPage() {
             setEditingBooking(null);
             fetchBookings();
           }}
+        />
+      )}
+
+      {showPaymentModal && selectedBookingForPayment && (
+        <PaymentModal
+          isOpen={showPaymentModal}
+          onClose={() => {
+            setShowPaymentModal(false);
+            setSelectedBookingForPayment(null);
+          }}
+          booking={selectedBookingForPayment}
+          onPaymentSuccess={handlePaymentSuccess}
         />
       )}
     </div>
