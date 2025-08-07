@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
     // Room Statistics
-    const totalRooms = await db.room.count();
+    const totalRooms = await db.room.count({});
     const availableRooms = await db.room.count({
       where: { status: 'AVAILABLE' },
     });
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Booking Statistics
-    const totalBookings = await db.booking.count();
+    const totalBookings = await db.booking.count({});
     const confirmedBookings = await db.booking.count({
       where: { status: 'CONFIRMED' },
     });
@@ -46,16 +46,101 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const todayRevenue = await db.booking.aggregate({
+    // **IMPROVED REVENUE CALCULATIONS**
+    // Today's Revenue - Based on actual payments processed today
+    const todayRevenue = await db.payment.aggregate({
       where: {
-        status: 'CONFIRMED',
-        checkIn: {
+        status: 'COMPLETED',
+        processedAt: {
           gte: today,
           lt: new Date(today.getTime() + 24 * 60 * 60 * 1000),
         },
       },
       _sum: {
+        amount: true,
+      },
+    });
+
+    // This Month's Revenue - Based on actual payments processed this month
+    const monthlyRevenue = await db.payment.aggregate({
+      where: {
+        status: 'COMPLETED',
+        processedAt: {
+          gte: startOfMonth,
+        },
+      },
+      _sum: {
+        amount: true,
+      },
+    });
+
+    // Weekly Revenue
+    const weeklyRevenue = await db.payment.aggregate({
+      where: {
+        status: 'COMPLETED',
+        processedAt: {
+          gte: startOfWeek,
+        },
+      },
+      _sum: {
+        amount: true,
+      },
+    });
+
+    // Pending Revenue (bookings with pending payments or pending status)
+    const pendingRevenue = await db.booking.aggregate({
+      where: {
+        OR: [
+          {
+            status: 'PENDING',
+          },
+          {
+            status: 'CONFIRMED',
+            payments: {
+              none: {
+                status: 'COMPLETED',
+              },
+            },
+          },
+        ],
+      },
+      _sum: {
         totalPrice: true,
+      },
+    });
+
+    // Refunded Revenue
+    const refundedRevenue = await db.payment.aggregate({
+      where: {
+        status: 'REFUNDED',
+        refundedAt: {
+          gte: startOfMonth,
+        },
+      },
+      _sum: {
+        amount: true,
+      },
+    });
+
+    // Payment Statistics
+    const totalPayments = await db.payment.count({});
+    const completedPayments = await db.payment.count({
+      where: { status: 'COMPLETED' },
+    });
+    const pendingPayments = await db.payment.count({
+      where: { status: 'PENDING' },
+    });
+    const failedPayments = await db.payment.count({
+      where: { status: 'FAILED' },
+    });
+
+    // Average payment value
+    const averagePaymentValue = await db.payment.aggregate({
+      where: {
+        status: 'COMPLETED',
+      },
+      _avg: {
+        amount: true,
       },
     });
 
@@ -68,18 +153,6 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const weeklyRevenue = await db.booking.aggregate({
-      where: {
-        status: 'CONFIRMED',
-        checkIn: {
-          gte: startOfWeek,
-        },
-      },
-      _sum: {
-        totalPrice: true,
-      },
-    });
-
     // Monthly Statistics
     const monthlyBookings = await db.booking.count({
       where: {
@@ -89,21 +162,8 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const monthlyRevenue = await db.booking.aggregate({
-      where: {
-        status: 'CONFIRMED',
-        checkIn: {
-          gte: startOfMonth,
-        },
-      },
-      _sum: {
-        totalPrice: true,
-      },
-    });
-
     // Guest Statistics
-    const uniqueGuests = await db.booking.groupBy({
-      by: ['userId'],
+    const uniqueGuests = await db.booking.findMany({
       where: {
         status: {
           in: ['CONFIRMED', 'COMPLETED'],
@@ -112,6 +172,10 @@ export async function GET(request: NextRequest) {
           gte: startOfMonth,
         },
       },
+      select: {
+        userId: true,
+      },
+      distinct: ['userId'],
     });
 
     // Average booking value
@@ -152,38 +216,76 @@ export async function GET(request: NextRequest) {
       },
     });
 
+    // Recent payments
+    const recentPayments = await db.payment.findMany({
+      take: 5,
+      orderBy: { processedAt: 'desc' },
+      where: {
+        status: 'COMPLETED',
+      },
+      include: {
+        booking: {
+          include: {
+            user: {
+              select: {
+                name: true,
+                email: true,
+              },
+            },
+            room: {
+              select: {
+                number: true,
+                type: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
     const stats = {
       rooms: {
-        total: totalRooms,
-        available: availableRooms,
-        occupied: occupiedRooms,
-        maintenance: maintenanceRooms,
-        occupancyRate: totalRooms > 0 ? ((occupiedRooms / totalRooms) * 100).toFixed(1) : 0,
+        total: totalRooms as number,
+        available: availableRooms as number,
+        occupied: occupiedRooms as number,
+        maintenance: maintenanceRooms as number,
+        occupancyRate: (totalRooms as number) > 0 ? (((occupiedRooms as number) / (totalRooms as number)) * 100).toFixed(1) : 0,
       },
       bookings: {
-        total: totalBookings,
-        confirmed: confirmedBookings,
-        pending: pendingBookings,
-        cancelled: cancelledBookings,
-        today: todayBookings,
-        weekly: weeklyBookings,
-        monthly: monthlyBookings,
+        total: totalBookings as number,
+        confirmed: confirmedBookings as number,
+        pending: pendingBookings as number,
+        cancelled: cancelledBookings as number,
+        today: todayBookings as number,
+        weekly: weeklyBookings as number,
+        monthly: monthlyBookings as number,
       },
       revenue: {
-        today: todayRevenue._sum.totalPrice || 0,
-        weekly: weeklyRevenue._sum.totalPrice || 0,
-        monthly: monthlyRevenue._sum.totalPrice || 0,
-        average: averageBookingValue._avg.totalPrice || 0,
+        today: (todayRevenue as any)?._sum?.amount || 0,
+        weekly: (weeklyRevenue as any)?._sum?.amount || 0,
+        monthly: (monthlyRevenue as any)?._sum?.amount || 0,
+        pending: (pendingRevenue as any)?._sum?.totalPrice || 0,
+        refunded: (refundedRevenue as any)?._sum?.amount || 0,
+        average: (averagePaymentValue as any)?._avg?.amount || 0,
+        netRevenue: ((monthlyRevenue as any)?._sum?.amount || 0) - ((refundedRevenue as any)?._sum?.amount || 0),
+      },
+      payments: {
+        total: totalPayments as number,
+        completed: completedPayments as number,
+        pending: pendingPayments as number,
+        failed: failedPayments as number,
+        successRate: (totalPayments as number) > 0 ? (((completedPayments as number) / (totalPayments as number)) * 100).toFixed(1) : 0,
       },
       guests: {
-        uniqueThisMonth: uniqueGuests.length,
+        uniqueThisMonth: (uniqueGuests as any[]).length,
         averageStayDuration: 2.5, // This would need more complex calculation
       },
-      roomTypes: roomTypeStats.reduce((acc, stat) => {
+      roomTypes: (roomTypeStats as any[]).reduce((acc, stat) => {
         acc[stat.type] = stat._count.id;
         return acc;
       }, {} as { [key: string]: number }),
       recentBookings,
+      recentPayments,
     };
 
     return NextResponse.json({ stats });

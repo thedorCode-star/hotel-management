@@ -71,38 +71,40 @@ export async function PUT(
       );
     }
 
-    // Validate status transition
-    const validTransitions: { [key: string]: string[] } = {
-      'PENDING': ['CONFIRMED', 'CANCELLED'],
-      'CONFIRMED': ['COMPLETED', 'CANCELLED'],
-      'CANCELLED': [],
-      'COMPLETED': [],
-    };
+    // Validate status transition - only check if status is being changed
+    if (status && status !== (existingBooking as any).status) {
+      const validTransitions: { [key: string]: string[] } = {
+        'PENDING': ['CONFIRMED', 'CANCELLED'],
+        'CONFIRMED': ['COMPLETED', 'CANCELLED'],
+        'CANCELLED': [],
+        'COMPLETED': [], // Allow editing but not status changes
+      };
 
-    if (status && !validTransitions[existingBooking.status]?.includes(status)) {
-      return NextResponse.json(
-        { error: `Invalid status transition from ${existingBooking.status} to ${status}` },
-        { status: 400 }
-      );
+      if (!validTransitions[(existingBooking as any).status]?.includes(status)) {
+        return NextResponse.json(
+          { error: `Invalid status transition from ${(existingBooking as any).status} to ${status}` },
+          { status: 400 }
+        );
+      }
     }
 
     // Handle status changes
-    if (status === 'CANCELLED' && existingBooking.status !== 'CANCELLED') {
+    if (status === 'CANCELLED' && (existingBooking as any).status !== 'CANCELLED') {
       // Update room status back to available
       await db.room.update({
-        where: { id: existingBooking.roomId },
+        where: { id: (existingBooking as any).roomId },
         data: { status: 'AVAILABLE' },
       });
-    } else if (status === 'CONFIRMED' && existingBooking.status === 'PENDING') {
+    } else if (status === 'CONFIRMED' && (existingBooking as any).status === 'PENDING') {
       // Update room status to occupied
       await db.room.update({
-        where: { id: existingBooking.roomId },
+        where: { id: (existingBooking as any).roomId },
         data: { status: 'OCCUPIED' },
       });
-    } else if (status === 'COMPLETED' && existingBooking.status === 'CONFIRMED') {
+    } else if (status === 'COMPLETED' && (existingBooking as any).status === 'CONFIRMED') {
       // Update room status back to available
       await db.room.update({
-        where: { id: existingBooking.roomId },
+        where: { id: (existingBooking as any).roomId },
         data: { status: 'AVAILABLE' },
       });
     }
@@ -168,7 +170,7 @@ export async function DELETE(
     }
 
     // Only allow deletion of pending or cancelled bookings
-    if (existingBooking.status === 'CONFIRMED' || existingBooking.status === 'COMPLETED') {
+    if ((existingBooking as any).status === 'CONFIRMED' || (existingBooking as any).status === 'COMPLETED') {
       return NextResponse.json(
         { error: 'Cannot delete confirmed or completed bookings' },
         { status: 400 }
@@ -176,9 +178,9 @@ export async function DELETE(
     }
 
     // Update room status if booking was pending
-    if (existingBooking.status === 'PENDING') {
+    if ((existingBooking as any).status === 'PENDING') {
       await db.room.update({
-        where: { id: existingBooking.roomId },
+        where: { id: (existingBooking as any).roomId },
         data: { status: 'AVAILABLE' },
       });
     }

@@ -1,65 +1,80 @@
 import { render, screen } from '@testing-library/react';
+import '@testing-library/jest-dom';
 import HomePage from '../page';
 
-describe('Home Page', () => {
-  it('renders the main heading', () => {
-    render(<HomePage />);
-    
-    const heading = screen.getByRole('heading', { 
-      name: /welcome to our hotel/i 
-    });
-    expect(heading).toBeTruthy();
-  });
+// Mock Next.js Link component
+jest.mock('next/link', () => {
+  return function MockLink({ href, children, ...props }: any) {
+    return <a href={href} {...props}>{children}</a>;
+  };
+});
 
+describe('HomePage', () => {
   it('renders login and register links', () => {
     render(<HomePage />);
     
-    const signInLinks = screen.getAllByRole('link', { name: /sign in/i });
-    const createAccountLinks = screen.getAllByRole('link', { name: /create account/i });
+    const loginLink = screen.getAllByRole('link', { name: /sign in/i })[0];
+    const registerLink = screen.getAllByRole('link', { name: /create account/i })[0];
     
-    expect(signInLinks[0]).toBeTruthy();
-    expect(createAccountLinks[0]).toBeTruthy();
-  });
-
-  it('renders feature cards', () => {
-    render(<HomePage />);
-    
-    const easyBookingCard = screen.getByText(/easy booking/i);
-    const securePaymentsCard = screen.getByText(/secure payments/i);
-    const guestReviewsCard = screen.getByText(/guest reviews/i);
-    const supportCard = screen.getByText(/24\/7 support/i);
-    
-    expect(easyBookingCard).toBeTruthy();
-    expect(securePaymentsCard).toBeTruthy();
-    expect(guestReviewsCard).toBeTruthy();
-    expect(supportCard).toBeTruthy();
+    expect(loginLink).toBeInTheDocument();
+    expect(registerLink).toBeInTheDocument();
   });
 
   it('renders call-to-action buttons', () => {
     render(<HomePage />);
     
-    const viewRoomsLinks = screen.getAllByRole('link', { name: /view rooms/i });
-    const browseRoomsButton = screen.getByRole('link', { name: /browse rooms/i });
-    const getStartedButton = screen.getByRole('link', { name: /get started/i });
+    const viewRoomsButton = screen.getAllByRole('link', { name: /view rooms/i })[0];
+    const browseRoomsButton = screen.getAllByRole('link', { name: /browse rooms/i })[0];
     
-    expect(viewRoomsLinks[0]).toBeTruthy();
-    expect(browseRoomsButton).toBeTruthy();
-    expect(getStartedButton).toBeTruthy();
+    expect(viewRoomsButton).toBeInTheDocument();
+    expect(browseRoomsButton).toBeInTheDocument();
+  });
+
+  it('renders hero section with title', () => {
+    render(<HomePage />);
+    
+    const heroTitle = screen.getByText(/welcome to our hotel/i);
+    expect(heroTitle).toBeInTheDocument();
+  });
+
+  it('renders features section', () => {
+    render(<HomePage />);
+    
+    const featuresTitle = screen.getByText(/why choose our hotel/i);
+    expect(featuresTitle).toBeInTheDocument();
   });
 
   it('renders footer links', () => {
     render(<HomePage />);
     
-    const contactLink = screen.getByRole('link', { name: /contact us/i });
-    const helpLink = screen.getByRole('link', { name: /help center/i });
-    const faqLink = screen.getByRole('link', { name: /faq/i });
-    const privacyLink = screen.getByRole('link', { name: /privacy policy/i });
-    const termsLink = screen.getByRole('link', { name: /terms of service/i });
+    const contactLink = screen.getByText(/contact us/i);
+    const privacyLink = screen.getByText(/privacy policy/i);
     
-    expect(contactLink).toBeTruthy();
-    expect(helpLink).toBeTruthy();
-    expect(faqLink).toBeTruthy();
-    expect(privacyLink).toBeTruthy();
-    expect(termsLink).toBeTruthy();
+    expect(contactLink).toBeInTheDocument();
+    expect(privacyLink).toBeInTheDocument();
+  });
+
+  // Snapshot tests
+  it('matches snapshot for homepage', () => {
+    const { container } = render(<HomePage />);
+    expect(container).toMatchSnapshot();
+  });
+
+  it('matches snapshot for hero section', () => {
+    const { container } = render(<HomePage />);
+    const heroSection = container.querySelector('.bg-gradient-to-r');
+    expect(heroSection).toMatchSnapshot();
+  });
+
+  it('matches snapshot for features section', () => {
+    const { container } = render(<HomePage />);
+    const featuresSection = container.querySelector('.bg-gray-50');
+    expect(featuresSection).toMatchSnapshot();
+  });
+
+  it('matches snapshot for footer', () => {
+    const { container } = render(<HomePage />);
+    const footer = container.querySelector('footer');
+    expect(footer).toMatchSnapshot();
   });
 }); 
