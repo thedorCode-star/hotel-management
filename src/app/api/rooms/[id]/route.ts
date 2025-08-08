@@ -3,12 +3,13 @@ import { getBuildSafeDatabase } from '../../../../lib/build-safe-db';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const db = getBuildSafeDatabase();
+    const { id } = await params;
     const room = await db.room.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         bookings: {
           include: {
@@ -53,17 +54,27 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const db = getBuildSafeDatabase();
+    const { id } = await params;
     const body = await request.json();
     
     const { number, type, capacity, price, description, status } = body;
 
     // Check if room exists
     const existingRoom = await db.room.findUnique({
-      where: { id: params.id },
+      where: { id },
+      include: {
+        bookings: {
+          where: {
+            status: {
+              in: ['PENDING', 'CONFIRMED']
+            }
+          }
+        }
+      }
     });
 
     if (!existingRoom) {
@@ -74,7 +85,7 @@ export async function PUT(
     }
 
     // If updating room number, check for duplicates
-    if (number && number !== existingRoom.number) {
+    if (number && number !== (existingRoom as any).number) {
       const duplicateRoom = await db.room.findUnique({
         where: { number },
       });
@@ -102,8 +113,9 @@ export async function PUT(
       );
     }
 
+    // Update room first
     const updatedRoom = await db.room.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...(number && { number }),
         ...(type && { type }),
@@ -113,6 +125,33 @@ export async function PUT(
         ...(status && { status }),
       },
     });
+
+    // If price changed, update all pending and confirmed bookings
+    if (price && price !== (existingRoom as any).price) {
+      console.log('🔄 Updating prices for existing bookings...');
+      
+      const existingRoomAny = existingRoom as any;
+      const bookings = existingRoomAny.bookings || [];
+      
+      // Update each booking's total price based on its duration
+      for (const booking of bookings) {
+        try {
+          const checkIn = new Date(booking.checkIn);
+          const checkOut = new Date(booking.checkOut);
+          const daysDiff = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 3600 * 24));
+          const newTotalPrice = price * daysDiff;
+
+          console.log(`📅 Booking ${booking.id}: ${daysDiff} days * $${price} = $${newTotalPrice}`);
+
+          await db.booking.update({
+            where: { id: booking.id },
+            data: { totalPrice: newTotalPrice },
+          });
+        } catch (bookingError) {
+          console.error(`❌ Error updating booking ${booking.id}:`, bookingError);
+        }
+      }
+    }
 
     return NextResponse.json({ room: updatedRoom });
   } catch (error) {
@@ -126,14 +165,15 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const db = getBuildSafeDatabase();
+    const { id } = await params;
 
     // Check if room exists
     const existingRoom = await db.room.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         bookings: true,
       },
@@ -147,8 +187,8 @@ export async function DELETE(
     }
 
     // Check if room has active bookings
-    const activeBookings = existingRoom.bookings.filter(
-      booking => booking.status === 'CONFIRMED' || booking.status === 'PENDING'
+    const activeBookings = (existingRoom as any).bookings.filter(
+      (booking: any) => booking.status === 'CONFIRMED' || booking.status === 'PENDING'
     );
 
     if (activeBookings.length > 0) {
@@ -159,7 +199,7 @@ export async function DELETE(
     }
 
     await db.room.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json(
