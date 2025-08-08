@@ -169,11 +169,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (room.status !== 'AVAILABLE') {
+    // Check room status - allow AVAILABLE and RESERVED rooms (RESERVED might be from expired bookings)
+    if (room.status !== 'AVAILABLE' && room.status !== 'RESERVED') {
       return NextResponse.json(
-        { error: 'Room is not available' },
+        { error: `Room is currently ${room.status.toLowerCase()}` },
         { status: 400 }
       );
+    }
+
+    // If room is RESERVED, check if there are any active bookings
+    if (room.status === 'RESERVED') {
+      const activeBookings = await db.booking.findMany({
+        where: {
+          roomId,
+          status: {
+            in: ['PENDING', 'PAID', 'CHECKED_IN']
+          }
+        }
+      }) as any[];
+
+      if (activeBookings.length > 0) {
+        return NextResponse.json(
+          { error: 'Room is currently reserved by another guest' },
+          { status: 400 }
+        );
+      }
     }
 
     // Check room capacity
@@ -189,7 +209,7 @@ export async function POST(request: NextRequest) {
       where: {
         roomId,
         status: {
-          in: ['PENDING', 'CONFIRMED'],
+          in: ['PENDING', 'PAID', 'CHECKED_IN'],
         },
         OR: [
           {

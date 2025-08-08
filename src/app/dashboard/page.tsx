@@ -15,7 +15,8 @@ import {
   TrendingUp,
   AlertCircle,
   RefreshCw,
-  CheckCircle
+  CheckCircle,
+  ArrowDownRight
 } from "lucide-react";
 
 interface User {
@@ -446,6 +447,23 @@ export default function DashboardPage() {
                   </p>
                 </div>
                 <CreditCard className="h-8 w-8 text-purple-600" />
+              </div>
+            </div>
+
+            {/* **NEW: Refunded Revenue Display */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Refunded This Month</p>
+                  <p className="text-2xl font-semibold text-red-600">
+                    {isStatsLoading ? (
+                      <span className="inline-block animate-pulse bg-gray-200 h-8 w-16 rounded"></span>
+                    ) : (
+                      formatCurrency(stats?.revenue?.refunded || 0)
+                    )}
+                  </p>
+                </div>
+                <ArrowDownRight className="h-8 w-8 text-red-600" />
               </div>
             </div>
           </div>

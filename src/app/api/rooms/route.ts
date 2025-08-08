@@ -14,7 +14,15 @@ export async function GET(request: NextRequest) {
     let whereClause: any = {};
     
     if (status && status !== 'all') {
-      whereClause.status = status;
+      // Handle comma-separated status values
+      if (status.includes(',')) {
+        const statuses = status.split(',').map(s => s.trim());
+        whereClause.status = {
+          in: statuses
+        };
+      } else {
+        whereClause.status = status;
+      }
     }
     
     if (type && type !== 'all') {

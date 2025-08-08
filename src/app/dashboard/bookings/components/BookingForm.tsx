@@ -58,13 +58,23 @@ export default function BookingForm({ booking, mode, onClose }: BookingFormProps
 
   const fetchRooms = async () => {
     try {
-      const response = await fetch('/api/rooms?status=AVAILABLE');
+      console.log('Fetching rooms with status: AVAILABLE,RESERVED');
+      // Fetch both AVAILABLE and RESERVED rooms (RESERVED might be from expired bookings)
+      const response = await fetch('/api/rooms?status=AVAILABLE,RESERVED');
+      console.log('Response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('Rooms data:', data);
         setRooms(data.rooms || []);
+      } else {
+        const errorText = await response.text();
+        console.error('Failed to fetch rooms:', response.status, errorText);
+        setErrors({ submit: `Failed to load available rooms (${response.status}). Please refresh the page.` });
       }
     } catch (error) {
       console.error('Error fetching rooms:', error);
+      setErrors({ submit: 'Failed to load available rooms. Please check your connection.' });
     } finally {
       setIsLoadingRooms(false);
     }
@@ -141,7 +151,24 @@ export default function BookingForm({ booking, mode, onClose }: BookingFormProps
       if (!response.ok) {
         const errorData = await response.json();
         console.log('API error response:', errorData); // Debug log
-        throw new Error(errorData.error || 'Failed to save booking');
+        
+        // Handle specific error cases
+        if (errorData.error.includes('Room is currently reserved')) {
+          setErrors({ submit: 'This room is currently reserved. Please try another room or contact staff.' });
+        } else if (errorData.error.includes('Room is already booked')) {
+          setErrors({ submit: 'This room is already booked for these dates. Please select different dates or another room.' });
+        } else if (errorData.error.includes('Room is not available')) {
+          setErrors({ submit: 'This room is not available. Please select another room.' });
+        } else if (errorData.error.includes('Check-in date cannot be in the past')) {
+          setErrors({ checkIn: 'Check-in date cannot be in the past' });
+        } else if (errorData.error.includes('Check-out date must be after check-in date')) {
+          setErrors({ checkOut: 'Check-out date must be after check-in date' });
+        } else if (errorData.error.includes('Room capacity is')) {
+          setErrors({ guestCount: errorData.error });
+        } else {
+          setErrors({ submit: errorData.error || 'Failed to save booking' });
+        }
+        return;
       }
 
       router.refresh();
