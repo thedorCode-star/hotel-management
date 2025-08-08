@@ -68,15 +68,17 @@ export async function POST(
     const hasPayment = (existingBooking as any).paidAmount > 0 || (existingBooking as any).payments.length > 0;
     if (!hasPayment) {
       return NextResponse.json(
-        { error: 'Payment must be completed before check-in. Please process payment first.' },
+        { error: 'Payment incomplete. Payment must be completed before check-in. Please process payment first.' },
         { status: 400 }
       );
     }
 
     // Additional validation: Ensure paid amount covers the booking
     if ((existingBooking as any).paidAmount < (existingBooking as any).totalPrice) {
+      const required = (existingBooking as any).totalPrice.toFixed(2);
+      const paid = (existingBooking as any).paidAmount.toFixed(2);
       return NextResponse.json(
-        { error: `Incomplete payment. Paid: $${(existingBooking as any).paidAmount}, Required: $${(existingBooking as any).totalPrice}` },
+        { error: `Payment incomplete. Required: $${required}, Paid: $${paid}. Please process payment first.` },
         { status: 400 }
       );
     }
@@ -86,7 +88,7 @@ export async function POST(
     const completedPayments = (existingBooking as any).payments.filter((p: any) => p.status === 'COMPLETED');
     if (completedPayments.length === 0 && (existingBooking as any).paidAmount === 0) {
       return NextResponse.json(
-        { error: 'No completed payment found. Please process payment before check-in.' },
+        { error: 'Payment incomplete. No completed payment found. Please process payment first.' },
         { status: 400 }
       );
     }

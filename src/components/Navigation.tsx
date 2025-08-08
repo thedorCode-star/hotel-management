@@ -16,10 +16,17 @@ export default function Navigation() {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [hasRefunds, setHasRefunds] = useState(false);
 
   useEffect(() => {
     checkAuthStatus();
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      checkRefunds();
+    }
+  }, [user]);
 
   const checkAuthStatus = async () => {
     try {
@@ -46,6 +53,18 @@ export default function Navigation() {
       localStorage.removeItem('token');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const checkRefunds = async () => {
+    try {
+      const response = await fetch('/api/refunds');
+      if (response.ok) {
+        const data = await response.json();
+        setHasRefunds(data.refunds && data.refunds.length > 0);
+      }
+    } catch (error) {
+      console.error('Error checking refunds:', error);
     }
   };
 
@@ -87,17 +106,17 @@ export default function Navigation() {
   }
 
   return (
-    <nav className="bg-white shadow">
+    <nav className="bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/70 border-b border-gray-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex items-center">
-            <Link href="/" className="flex-shrink-0">
-              <h1 className="text-xl font-bold text-blue-600">Hotel Management</h1>
+            <Link href="/" className="flex-shrink-0 group">
+              <h1 className="text-xl font-bold text-blue-600 group-hover:text-blue-700 transition-colors">Hotel Management</h1>
             </Link>
-            <div className="hidden md:ml-6 md:flex md:space-x-8">
+            <div className="hidden md:ml-6 md:flex md:space-x-1">
               <Link
                 href="/rooms"
-                className="text-gray-900 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
+                className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50/60 transition-colors"
               >
                 Rooms
               </Link>
@@ -105,14 +124,33 @@ export default function Navigation() {
                 <>
                   <Link
                     href="/dashboard"
-                    className="text-gray-900 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
+                    className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50/60 transition-colors"
                   >
                     Dashboard
                   </Link>
+                  <Link
+                    href="/dashboard/bookings"
+                    className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50/60 transition-colors"
+                  >
+                    Bookings
+                  </Link>
+                  {/* **NEW: Refunds navigation - only shows when refunds exist */}
+                  {hasRefunds && (
+                    <Link
+                      href="/dashboard/refunds"
+                      className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50/60 transition-colors flex items-center"
+                    >
+                      <span className="mr-1">💰</span>
+                      Refunds
+                      <span className="ml-1 bg-red-100 text-red-600 text-xs px-2 py-0.5 rounded-full animate-pulse">
+                        {hasRefunds ? '!' : ''}
+                      </span>
+                    </Link>
+                  )}
                   {user.role === 'ADMIN' && (
                     <Link
                       href="/dashboard/admin"
-                      className="text-gray-900 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
+                      className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50/60 transition-colors"
                     >
                       Admin
                     </Link>
@@ -127,26 +165,26 @@ export default function Navigation() {
               <div className="relative">
                 <button
                   onClick={() => setIsMenuOpen(!isMenuOpen)}
-                  className="flex items-center space-x-2 text-gray-900 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
+                  className="flex items-center space-x-2 text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-50/60 transition-colors"
                 >
-                  <span>{user.name}</span>
+                  <span className="truncate max-w-[140px]">{user.name}</span>
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
 
                 {isMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg ring-1 ring-black/5 py-2 z-50">
                     <Link
                       href="/dashboard/user"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                       onClick={() => setIsMenuOpen(false)}
                     >
                       My Profile
                     </Link>
                     <Link
                       href="/dashboard/bookings"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                       onClick={() => setIsMenuOpen(false)}
                     >
                       My Bookings
@@ -156,7 +194,7 @@ export default function Navigation() {
                         handleLogout();
                         setIsMenuOpen(false);
                       }}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                     >
                       Sign Out
                     </button>
@@ -167,13 +205,13 @@ export default function Navigation() {
               <div className="flex space-x-4">
                 <Link
                   href="/auth/login"
-                  className="text-gray-900 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
+                  className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-50/60 transition-colors"
                 >
                   Sign In
                 </Link>
                 <Link
                   href="/auth/register"
-                  className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700"
+                  className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 shadow-sm hover:shadow transition"
                 >
                   Sign Up
                 </Link>
@@ -185,7 +223,7 @@ export default function Navigation() {
           <div className="md:hidden flex items-center">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="text-gray-900 hover:text-blue-600 p-2"
+              className="text-gray-700 hover:text-blue-600 p-2"
             >
               <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -237,6 +275,20 @@ export default function Navigation() {
                   >
                     My Bookings
                   </Link>
+                  {/* **NEW: Refunds navigation in mobile menu - only shows when refunds exist */}
+                  {hasRefunds && (
+                    <Link
+                      href="/dashboard/refunds"
+                      className="text-gray-900 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium flex items-center"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <span className="mr-1">💰</span>
+                      Refunds
+                      <span className="ml-1 bg-red-100 text-red-600 text-xs px-2 py-0.5 rounded-full">
+                        !
+                      </span>
+                    </Link>
+                  )}
                   <button
                     onClick={() => {
                       handleLogout();

@@ -203,41 +203,41 @@ export default function BookingForm({ booking, mode, onClose }: BookingFormProps
 
   if (isLoadingRooms) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-6">
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+        <div className="bg-gradient-to-br from-white to-gray-50 rounded-3xl p-6 shadow-2xl border border-gray-200/50">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="text-center mt-2">Loading rooms...</p>
+          <p className="text-center mt-2 text-gray-600">Loading rooms...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-gradient-to-br from-white to-gray-50 rounded-3xl p-6 w-full max-w-md mx-auto max-h-[90vh] flex flex-col shadow-2xl border border-gray-200/50 overflow-hidden">
+        <div className="flex justify-between items-center mb-6 flex-shrink-0">
+          <h2 className="text-xl font-bold text-gray-900">
             {mode === 'create' ? 'Create New Booking' : 'Edit Booking'}
           </h2>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
+            className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors"
           >
-            ✕
+            <span className="text-gray-500 font-bold">×</span>
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="flex-1 space-y-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
               Room *
             </label>
             <select
               value={formData.roomId}
               onChange={(e) => handleInputChange('roomId', e.target.value)}
-              className={`w-full px-3 py-2 border rounded-md ${
+              className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white shadow-sm ${
                 errors.roomId ? 'border-red-500' : 'border-gray-300'
-              } focus:outline-none focus:ring-2 focus:ring-blue-500`}
+              }`}
             >
               <option value="">Select a room</option>
               {rooms.map(room => (
@@ -253,7 +253,7 @@ export default function BookingForm({ booking, mode, onClose }: BookingFormProps
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Check-in Date *
               </label>
               <input
@@ -267,9 +267,9 @@ export default function BookingForm({ booking, mode, onClose }: BookingFormProps
                   const day = String(today.getDate()).padStart(2, '0');
                   return `${year}-${month}-${day}`;
                 })()}
-                className={`w-full px-3 py-2 border rounded-md ${
+                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white shadow-sm ${
                   errors.checkIn ? 'border-red-500' : 'border-gray-300'
-                } focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                }`}
               />
               {errors.checkIn && (
                 <p className="text-red-500 text-sm mt-1">{errors.checkIn}</p>
@@ -277,7 +277,7 @@ export default function BookingForm({ booking, mode, onClose }: BookingFormProps
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Check-out Date *
               </label>
               <input
@@ -291,9 +291,9 @@ export default function BookingForm({ booking, mode, onClose }: BookingFormProps
                   const day = String(today.getDate()).padStart(2, '0');
                   return `${year}-${month}-${day}`;
                 })()}
-                className={`w-full px-3 py-2 border rounded-md ${
+                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white shadow-sm ${
                   errors.checkOut ? 'border-red-500' : 'border-gray-300'
-                } focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                }`}
               />
               {errors.checkOut && (
                 <p className="text-red-500 text-sm mt-1">{errors.checkOut}</p>
@@ -302,7 +302,7 @@ export default function BookingForm({ booking, mode, onClose }: BookingFormProps
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
               Number of Guests *
             </label>
             <input
@@ -315,9 +315,9 @@ export default function BookingForm({ booking, mode, onClose }: BookingFormProps
                 const parsedValue = value === '' ? 1 : parseInt(value) || 1;
                 handleInputChange('guestCount', parsedValue);
               }}
-              className={`w-full px-3 py-2 border rounded-md ${
+              className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white shadow-sm ${
                 errors.guestCount ? 'border-red-500' : 'border-gray-300'
-              } focus:outline-none focus:ring-2 focus:ring-blue-500`}
+              }`}
             />
             {errors.guestCount && (
               <p className="text-red-500 text-sm mt-1">{errors.guestCount}</p>
@@ -325,31 +325,31 @@ export default function BookingForm({ booking, mode, onClose }: BookingFormProps
           </div>
 
           {formData.roomId && formData.checkIn && formData.checkOut && (
-            <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
-              <p className="text-sm text-blue-800">
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-4 border border-blue-200/50">
+              <p className="text-sm font-semibold text-blue-800">
                 <strong>Total Price:</strong> ${calculateTotalPrice().toFixed(2)}
               </p>
             </div>
           )}
 
           {errors.submit && (
-            <div className="bg-red-50 border border-red-200 rounded-md p-3">
-              <p className="text-red-600 text-sm">{errors.submit}</p>
+            <div className="bg-gradient-to-r from-red-50 to-pink-50 rounded-2xl p-4 border border-red-200/50 overflow-hidden">
+              <p className="text-red-600 text-sm font-medium break-words whitespace-normal leading-relaxed">{errors.submit}</p>
             </div>
           )}
 
-          <div className="flex space-x-3 pt-4">
+          <div className="flex space-x-4 pt-6">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 font-semibold hover:bg-gray-50 transition-all duration-200"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
               {isSubmitting ? 'Saving...' : mode === 'create' ? 'Create Booking' : 'Update Booking'}
             </button>

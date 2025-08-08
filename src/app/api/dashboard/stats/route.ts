@@ -173,35 +173,7 @@ export async function GET(request: NextRequest) {
     });
 
     // **FIXED: Comprehensive Refunded Revenue Calculation**
-    // Include both payment refunds and booking refunds
-    const refundedRevenueFromPayments = await db.payment.aggregate({
-      where: {
-        status: 'REFUNDED',
-        refundedAt: {
-          gte: startOfMonth,
-        },
-      },
-      _sum: {
-        amount: true,
-      },
-    });
-
-    // Also include refunds from bookings (refundAmount field)
-    const refundedRevenueFromBookings = await db.booking.aggregate({
-      where: {
-        refundAmount: {
-          gt: 0,
-        },
-        updatedAt: {
-          gte: startOfMonth,
-        },
-      },
-      _sum: {
-        refundAmount: true,
-      },
-    });
-
-    // **NEW: Include refunds from the new Refund model**
+    // Use only the new Refund model to avoid double-counting
     const refundedRevenueFromRefundModel = await db.refund.aggregate({
       where: {
         status: 'COMPLETED',
@@ -214,13 +186,12 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // Total refunded revenue (combine all sources)
-    const totalRefundedRevenue = ((refundedRevenueFromPayments as any)?._sum?.amount || 0) + 
-                                ((refundedRevenueFromBookings as any)?._sum?.refundAmount || 0) +
-                                ((refundedRevenueFromRefundModel as any)?._sum?.amount || 0);
+    // **FIXED: Total refunded revenue (use only Refund model)**
+    const totalRefundedRevenue = ((refundedRevenueFromRefundModel as any)?._sum?.amount || 0);
 
     // **FIXED: Net Revenue Calculation (Completed payments - Refunds)**
-    const netRevenue = ((monthlyRevenue as any)?._sum?.amount || 0) - totalRefundedRevenue;
+    // Refunds should be SUBTRACTED from revenue, not added
+    const netRevenue = Math.max(0, ((monthlyRevenue as any)?._sum?.amount || 0) - totalRefundedRevenue);
 
     // Payment Statistics
     const totalPayments = await db.payment.count({});
