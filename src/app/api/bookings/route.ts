@@ -222,6 +222,9 @@ export async function POST(request: NextRequest) {
         checkOut: checkOutDate,
         totalPrice,
         status: 'PENDING',
+        paymentRequired: true,
+        paidAmount: 0,
+        refundAmount: 0
       },
       include: {
         user: {
@@ -242,7 +245,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Update room status to reserved
+    // Update room status to RESERVED (not OCCUPIED until payment)
     await db.room.update({
       where: { id: roomId },
       data: { status: 'RESERVED' },

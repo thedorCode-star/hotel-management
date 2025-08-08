@@ -194,10 +194,27 @@ export async function POST(request: NextRequest) {
 
       // Update booking status if payment is successful
       if (paymentStatus === 'COMPLETED') {
-        await db.booking.update({
+        const updatedBooking = await db.booking.update({
           where: { id: bookingId },
-          data: { status: 'CONFIRMED' }
+          data: { 
+            status: 'PAID',
+            paidAmount: amount
+          },
+          include: {
+            room: {
+              select: { id: true, number: true, status: true }
+            }
+          }
         });
+
+        // Update room status to RESERVED (not OCCUPIED until check-in)
+        if ((updatedBooking as any).room) {
+          await db.room.update({
+            where: { id: (updatedBooking as any).room.id },
+            data: { status: 'RESERVED' }
+          });
+          console.log(`🏠 Room ${(updatedBooking as any).room.number} marked as RESERVED for booking ${bookingId}`);
+        }
 
         // Send payment confirmation email
         try {

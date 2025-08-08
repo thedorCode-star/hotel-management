@@ -3,12 +3,13 @@ import { getBuildSafeDatabase } from '../../../../lib/build-safe-db';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const db = getBuildSafeDatabase();
+    const { id } = await params;
     const booking = await db.booking.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         user: {
           select: {
@@ -48,17 +49,18 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const db = getBuildSafeDatabase();
+    const { id } = await params;
     const body = await request.json();
     
     const { status, checkIn, checkOut } = body;
 
     // Check if booking exists
     const existingBooking = await db.booking.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         room: true,
       },
@@ -109,13 +111,70 @@ export async function PUT(
       });
     }
 
+    // Auto-complete bookings where check-out date has passed
+    const checkOutDate = checkOut ? new Date(checkOut) : new Date((existingBooking as any).checkOut);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (checkOutDate < today && (existingBooking as any).status === 'CONFIRMED') {
+      // Auto-complete the booking and make room available
+      await db.room.update({
+        where: { id: (existingBooking as any).roomId },
+        data: { status: 'AVAILABLE' },
+      });
+      console.log(`Auto-completed booking ${id} - check-out date passed`);
+    }
+
+    // Calculate new total price if dates or room changed
+    let newTotalPrice = undefined;
+    if (checkIn || checkOut || body.roomId) {
+      console.log('🔍 Calculating new total price...');
+      console.log('📅 Check-in:', checkIn || 'unchanged');
+      console.log('📅 Check-out:', checkOut || 'unchanged');
+      console.log('🏠 Room ID:', body.roomId || 'unchanged');
+      
+      const newCheckIn = checkIn ? new Date(checkIn) : new Date((existingBooking as any).checkIn);
+      const newCheckOut = checkOut ? new Date(checkOut) : new Date((existingBooking as any).checkOut);
+      const newRoomId = body.roomId || (existingBooking as any).roomId;
+      
+      console.log('📅 New check-in:', newCheckIn);
+      console.log('📅 New check-out:', newCheckOut);
+      console.log('🏠 New room ID:', newRoomId);
+      
+      // Get room price and calculate total
+      const room = await db.room.findUnique({ 
+        where: { id: newRoomId },
+        select: { price: true }
+      });
+      
+      console.log('💰 Room price:', (room as any)?.price);
+      
+      if (!room || typeof (room as any).price !== 'number') {
+        return NextResponse.json(
+          { error: 'Room not found or invalid room price' },
+          { status: 400 }
+        );
+      }
+      
+      const daysDiff = Math.ceil(
+        (newCheckOut.getTime() - newCheckIn.getTime()) / (1000 * 3600 * 24)
+      );
+      newTotalPrice = (room as any).price * daysDiff;
+      
+      console.log('📊 Days difference:', daysDiff);
+      console.log('💰 New total price:', newTotalPrice);
+    }
+
     // Update booking
+    console.log('💾 Updating booking with new total price:', newTotalPrice);
     const updatedBooking = await db.booking.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...(status && { status }),
         ...(checkIn && { checkIn: new Date(checkIn) }),
         ...(checkOut && { checkOut: new Date(checkOut) }),
+        ...(body.roomId && { roomId: body.roomId }),
+        ...(newTotalPrice !== undefined && { totalPrice: newTotalPrice }),
       },
       include: {
         user: {
@@ -137,6 +196,8 @@ export async function PUT(
       },
     });
 
+    console.log('✅ Booking updated successfully. New total price:', (updatedBooking as any).totalPrice);
+
     return NextResponse.json({ booking: updatedBooking });
   } catch (error) {
     console.error('Error updating booking:', error);
@@ -149,14 +210,15 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const db = getBuildSafeDatabase();
+    const { id } = await params;
 
     // Check if booking exists
     const existingBooking = await db.booking.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         room: true,
       },
@@ -186,7 +248,7 @@ export async function DELETE(
     }
 
     await db.booking.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json(

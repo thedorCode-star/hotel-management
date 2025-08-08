@@ -32,6 +32,7 @@ export default function RoomForm({ room, mode, onClose }: RoomFormProps) {
   });
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
@@ -64,6 +65,7 @@ export default function RoomForm({ room, mode, onClose }: RoomFormProps) {
     }
 
     setIsSubmitting(true);
+    setErrors({}); // Clear previous errors
 
     try {
       const url = mode === 'create' ? '/api/rooms' : `/api/rooms/${room?.id}`;
@@ -79,14 +81,30 @@ export default function RoomForm({ room, mode, onClose }: RoomFormProps) {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to save room');
+        const errorMessage = errorData.error || 'Failed to save room';
+        
+        // Handle specific error cases
+        if (errorMessage.includes('Room number already exists')) {
+          setErrors({ number: 'Room number already exists. Please choose a different number.' });
+        } else if (errorMessage.includes('Capacity must be between')) {
+          setErrors({ capacity: errorMessage });
+        } else if (errorMessage.includes('Price must be positive')) {
+          setErrors({ price: errorMessage });
+        } else {
+          setErrors({ submit: errorMessage });
+        }
+        return; // Don't proceed with success actions
       }
 
-      router.refresh();
-      onClose();
+      // Success!
+      setIsSuccess(true);
+      setTimeout(() => {
+        router.refresh();
+        onClose();
+      }, 1000);
     } catch (error) {
       console.error('Error saving room:', error);
-      setErrors({ submit: error instanceof Error ? error.message : 'Failed to save room' });
+      setErrors({ submit: 'An unexpected error occurred. Please try again.' });
     } finally {
       setIsSubmitting(false);
     }
@@ -245,7 +263,33 @@ export default function RoomForm({ room, mode, onClose }: RoomFormProps) {
 
           {errors.submit && (
             <div className="bg-red-50 border border-red-200 rounded-md p-3">
-              <p className="text-red-600 text-sm">{errors.submit}</p>
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-red-600">{errors.submit}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {isSuccess && (
+            <div className="bg-green-50 border border-green-200 rounded-md p-3">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-green-600">
+                    {mode === 'create' ? 'Room created successfully!' : 'Room updated successfully!'}
+                  </p>
+                </div>
+              </div>
             </div>
           )}
 
@@ -259,10 +303,10 @@ export default function RoomForm({ room, mode, onClose }: RoomFormProps) {
             </button>
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isSuccess}
               className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isSubmitting ? 'Saving...' : mode === 'create' ? 'Create Room' : 'Update Room'}
+              {isSubmitting ? 'Saving...' : isSuccess ? 'Success!' : mode === 'create' ? 'Create Room' : 'Update Room'}
             </button>
           </div>
         </form>

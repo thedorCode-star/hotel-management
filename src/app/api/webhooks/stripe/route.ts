@@ -78,10 +78,24 @@ export async function POST(request: NextRequest) {
     });
 
     // Update booking status to CONFIRMED
-    await db.booking.update({
+    const updatedBooking = await db.booking.update({
       where: { id: bookingId },
-      data: { status: 'CONFIRMED' }
+      data: { status: 'CONFIRMED' },
+      include: {
+        room: {
+          select: { id: true, number: true, status: true }
+        }
+      }
     });
+
+    // Update room status to OCCUPIED
+    if ((updatedBooking as any).room) {
+      await db.room.update({
+        where: { id: (updatedBooking as any).room.id },
+        data: { status: 'OCCUPIED' }
+      });
+      console.log(`Room ${(updatedBooking as any).room.number} marked as OCCUPIED for booking ${bookingId}`);
+    }
 
     console.log(`Payment succeeded for booking ${bookingId}`);
   }

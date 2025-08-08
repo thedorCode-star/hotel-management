@@ -12,6 +12,12 @@ export async function GET(request: NextRequest) {
     startOfWeek.setDate(today.getDate() - today.getDay());
     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
+    // Auto-complete bookings where check-out date has passed
+    await autoCompleteBookings(db, today);
+
+    // Fix room status for completed payments
+    await fixRoomStatusForCompletedPayments(db);
+
     // Room Statistics
     const totalRooms = await db.room.count({});
     const availableRooms = await db.room.count({
@@ -121,6 +127,9 @@ export async function GET(request: NextRequest) {
         amount: true,
       },
     });
+
+    // Net Revenue (Completed payments - Refunds)
+    const netRevenue = ((monthlyRevenue as any)?._sum?.amount || 0) - ((refundedRevenue as any)?._sum?.amount || 0);
 
     // Payment Statistics
     const totalPayments = await db.payment.count({});
@@ -267,7 +276,7 @@ export async function GET(request: NextRequest) {
         pending: (pendingRevenue as any)?._sum?.totalPrice || 0,
         refunded: (refundedRevenue as any)?._sum?.amount || 0,
         average: (averagePaymentValue as any)?._avg?.amount || 0,
-        netRevenue: ((monthlyRevenue as any)?._sum?.amount || 0) - ((refundedRevenue as any)?._sum?.amount || 0),
+        netRevenue: netRevenue,
       },
       payments: {
         total: totalPayments as number,
@@ -292,8 +301,176 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching dashboard stats:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch dashboard statistics' },
+      { error: 'Failed to fetch dashboard stats' },
       { status: 500 }
     );
+  }
+}
+
+// Function to automatically complete bookings where check-out date has passed
+async function autoCompleteBookings(db: any, today: Date) {
+  try {
+    // Find all confirmed bookings where check-out date has passed
+    const expiredBookings = await db.booking.findMany({
+      where: {
+        status: 'CONFIRMED',
+        checkOut: {
+          lt: today,
+        },
+      },
+      include: {
+        room: {
+          select: { id: true, number: true }
+        }
+      }
+    });
+
+    // Update each expired booking to COMPLETED and make room AVAILABLE
+    for (const booking of expiredBookings) {
+      try {
+        // Update booking status to COMPLETED
+        await db.booking.update({
+          where: { id: booking.id },
+          data: { status: 'COMPLETED' }
+        });
+
+        // Update room status to AVAILABLE
+        if (booking.room) {
+          await db.room.update({
+            where: { id: booking.room.id },
+            data: { status: 'AVAILABLE' }
+          });
+          console.log(`✅ Auto-completed booking ${booking.id} - Room ${booking.room.number} now AVAILABLE`);
+        }
+      } catch (bookingError) {
+        console.error(`❌ Error auto-completing booking ${booking.id}:`, bookingError);
+      }
+    }
+
+    if (expiredBookings.length > 0) {
+      console.log(`🔄 Auto-completed ${expiredBookings.length} bookings`);
+    }
+  } catch (error) {
+    console.error('Error in autoCompleteBookings:', error);
+  }
+}
+
+// Function to fix room status for completed payments
+async function fixRoomStatusForCompletedPayments(db: any) {
+  try {
+    console.log('🔧 Checking for rooms with incorrect status...');
+    
+    // Specific fix for Room A06
+    const roomA06 = await db.room.findFirst({
+      where: {
+        number: 'A06'
+      },
+      include: {
+        bookings: {
+          where: {
+            status: 'CONFIRMED'
+          },
+          include: {
+            payments: {
+              where: {
+                status: 'COMPLETED'
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (roomA06 && roomA06.status === 'RESERVED') {
+      const hasCompletedPayment = (roomA06.bookings as any[]).some((booking: any) => 
+        (booking.payments as any[]).length > 0
+      );
+
+      if (hasCompletedPayment) {
+        await db.room.update({
+          where: { id: roomA06.id },
+          data: { status: 'OCCUPIED' }
+        });
+        console.log(`✅ Fixed Room A06 status from RESERVED to OCCUPIED`);
+      } else {
+        console.log(`ℹ️ Room A06 has no completed payments, keeping as RESERVED`);
+      }
+    }
+    
+    // Find all rooms that are RESERVED but have confirmed bookings
+    const reservedRooms = await db.room.findMany({
+      where: {
+        status: 'RESERVED'
+      },
+      include: {
+        bookings: {
+          where: {
+            status: 'CONFIRMED'
+          },
+          include: {
+            payments: {
+              where: {
+                status: 'COMPLETED'
+              }
+            }
+          }
+        }
+      }
+    });
+
+    console.log(`Found ${reservedRooms.length} reserved rooms to check`);
+
+    // Update room status for rooms with completed payments
+    for (const room of reservedRooms) {
+      console.log(`Checking Room ${room.number}...`);
+      
+      const hasCompletedPayment = (room.bookings as any[]).some((booking: any) => 
+        (booking.payments as any[]).length > 0
+      );
+
+      if (hasCompletedPayment) {
+        await db.room.update({
+          where: { id: room.id },
+          data: { status: 'OCCUPIED' }
+        });
+        console.log(`✅ Fixed Room ${room.number} status from RESERVED to OCCUPIED`);
+      } else {
+        console.log(`ℹ️ Room ${room.number} has no completed payments, keeping as RESERVED`);
+      }
+    }
+
+    // Also check for rooms that should be AVAILABLE (no active bookings)
+    const occupiedRooms = await db.room.findMany({
+      where: {
+        status: 'OCCUPIED'
+      },
+      include: {
+        bookings: {
+          where: {
+            status: {
+              in: ['CONFIRMED', 'PENDING']
+            }
+          }
+        }
+      }
+    });
+
+    console.log(`Found ${occupiedRooms.length} occupied rooms to check`);
+
+    for (const room of occupiedRooms) {
+      const hasActiveBookings = (room.bookings as any[]).length > 0;
+      
+      if (!hasActiveBookings) {
+        await db.room.update({
+          where: { id: room.id },
+          data: { status: 'AVAILABLE' }
+        });
+        console.log(`✅ Fixed Room ${room.number} status from OCCUPIED to AVAILABLE`);
+      }
+    }
+
+    console.log('🔧 Room status fix completed');
+  } catch (error) {
+    console.error('Error in fixRoomStatusForCompletedPayments:', error);
   }
 } 
