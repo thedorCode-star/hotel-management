@@ -32,14 +32,20 @@ export async function GET(request: NextRequest) {
 
     // Booking Statistics
     const totalBookings = await db.booking.count({});
-    const confirmedBookings = await db.booking.count({
-      where: { status: 'CONFIRMED' },
+    const paidBookings = await db.booking.count({
+      where: { status: 'PAID' },
     });
     const pendingBookings = await db.booking.count({
       where: { status: 'PENDING' },
     });
     const cancelledBookings = await db.booking.count({
       where: { status: 'CANCELLED' },
+    });
+    const checkedInBookings = await db.booking.count({
+      where: { status: 'CHECKED_IN' },
+    });
+    const completedBookings = await db.booking.count({
+      where: { status: 'COMPLETED' },
     });
 
     // Today's Statistics
@@ -52,8 +58,9 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // **IMPROVED REVENUE CALCULATIONS**
-    // Today's Revenue - Based on actual payments processed today
+    // **COMPREHENSIVE REVENUE CALCULATIONS**
+    
+    // 1. Today's Revenue - Based on actual payments processed today
     const todayRevenue = await db.payment.aggregate({
       where: {
         status: 'COMPLETED',
@@ -64,6 +71,56 @@ export async function GET(request: NextRequest) {
       },
       _sum: {
         amount: true,
+      },
+    });
+
+    // 2. Revenue from guests checking in today
+    const checkInRevenue = await db.booking.aggregate({
+      where: {
+        checkIn: {
+          gte: today,
+          lt: new Date(today.getTime() + 24 * 60 * 60 * 1000),
+        },
+        status: {
+          in: ['PAID', 'CHECKED_IN', 'COMPLETED']
+        }
+      },
+      _sum: {
+        totalPrice: true,
+      },
+    });
+
+    // 3. Revenue from guests staying today (check-in <= today <= check-out)
+    const stayingTodayRevenue = await db.booking.aggregate({
+      where: {
+        checkIn: {
+          lte: new Date(today.getTime() + 24 * 60 * 60 * 1000),
+        },
+        checkOut: {
+          gt: today,
+        },
+        status: {
+          in: ['PAID', 'CHECKED_IN', 'COMPLETED']
+        }
+      },
+      _sum: {
+        totalPrice: true,
+      },
+    });
+
+    // 4. Revenue from bookings made today
+    const bookingsMadeTodayRevenue = await db.booking.aggregate({
+      where: {
+        createdAt: {
+          gte: today,
+          lt: new Date(today.getTime() + 24 * 60 * 60 * 1000),
+        },
+        status: {
+          in: ['PAID', 'CHECKED_IN', 'COMPLETED']
+        }
+      },
+      _sum: {
+        totalPrice: true,
       },
     });
 
@@ -101,7 +158,7 @@ export async function GET(request: NextRequest) {
             status: 'PENDING',
           },
           {
-            status: 'CONFIRMED',
+            status: 'PAID',
             payments: {
               none: {
                 status: 'COMPLETED',
@@ -175,7 +232,7 @@ export async function GET(request: NextRequest) {
     const uniqueGuests = await db.booking.findMany({
       where: {
         status: {
-          in: ['CONFIRMED', 'COMPLETED'],
+          in: ['PAID', 'COMPLETED', 'CHECKED_IN'],
         },
         checkIn: {
           gte: startOfMonth,
@@ -190,7 +247,7 @@ export async function GET(request: NextRequest) {
     // Average booking value
     const averageBookingValue = await db.booking.aggregate({
       where: {
-        status: 'CONFIRMED',
+        status: 'PAID',
       },
       _avg: {
         totalPrice: true,
@@ -262,7 +319,7 @@ export async function GET(request: NextRequest) {
       },
       bookings: {
         total: totalBookings as number,
-        confirmed: confirmedBookings as number,
+        confirmed: paidBookings as number,
         pending: pendingBookings as number,
         cancelled: cancelledBookings as number,
         today: todayBookings as number,
@@ -271,6 +328,9 @@ export async function GET(request: NextRequest) {
       },
       revenue: {
         today: (todayRevenue as any)?._sum?.amount || 0,
+        checkInToday: (checkInRevenue as any)?._sum?.totalPrice || 0,
+        stayingToday: (stayingTodayRevenue as any)?._sum?.totalPrice || 0,
+        bookingsMadeToday: (bookingsMadeTodayRevenue as any)?._sum?.totalPrice || 0,
         weekly: (weeklyRevenue as any)?._sum?.amount || 0,
         monthly: (monthlyRevenue as any)?._sum?.amount || 0,
         pending: (pendingRevenue as any)?._sum?.totalPrice || 0,
@@ -310,10 +370,10 @@ export async function GET(request: NextRequest) {
 // Function to automatically complete bookings where check-out date has passed
 async function autoCompleteBookings(db: any, today: Date) {
   try {
-    // Find all confirmed bookings where check-out date has passed
+    // Find all paid bookings where check-out date has passed
     const expiredBookings = await db.booking.findMany({
       where: {
-        status: 'CONFIRMED',
+        status: 'PAID',
         checkOut: {
           lt: today,
         },
@@ -368,7 +428,7 @@ async function fixRoomStatusForCompletedPayments(db: any) {
       include: {
         bookings: {
           where: {
-            status: 'CONFIRMED'
+            status: 'PAID'
           },
           include: {
             payments: {
@@ -397,7 +457,7 @@ async function fixRoomStatusForCompletedPayments(db: any) {
       }
     }
     
-    // Find all rooms that are RESERVED but have confirmed bookings
+    // Find all rooms that are RESERVED but have paid bookings
     const reservedRooms = await db.room.findMany({
       where: {
         status: 'RESERVED'
@@ -405,7 +465,7 @@ async function fixRoomStatusForCompletedPayments(db: any) {
       include: {
         bookings: {
           where: {
-            status: 'CONFIRMED'
+            status: 'PAID'
           },
           include: {
             payments: {
@@ -448,7 +508,7 @@ async function fixRoomStatusForCompletedPayments(db: any) {
         bookings: {
           where: {
             status: {
-              in: ['CONFIRMED', 'PENDING']
+              in: ['PAID', 'PENDING', 'CHECKED_IN']
             }
           }
         }
