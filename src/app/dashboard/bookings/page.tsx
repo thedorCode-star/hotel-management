@@ -407,8 +407,8 @@ export default function BookingsPage() {
                       {booking.refundAmount > 0 && (
                         <div className="text-purple-600">Refunded: ${booking.refundAmount.toFixed(2)}</div>
                       )}
-                      {/* Show payment status warning only if truly missing */}
-                      {booking.status === 'CHECKED_IN' && booking.paidAmount === 0 && booking.totalPrice > 0 && (
+                      {/* Show payment status warning if needed */}
+                      {booking.status === 'CHECKED_IN' && booking.paidAmount === 0 && (
                         <div className="text-orange-600 text-xs">⚠️ Payment not recorded</div>
                       )}
                     </div>

@@ -109,9 +109,7 @@ export async function POST(
       where: { id },
       data: {
         status: 'CHECKED_IN',
-        notes: notes ? `Check-in: ${notes}` : 'Guest checked in',
-        // **FIXED: Auto-update paidAmount if missing (for existing bookings)**
-        paidAmount: (existingBooking as any).paidAmount === 0 ? (existingBooking as any).totalPrice : (existingBooking as any).paidAmount
+        notes: notes ? `Check-in: ${notes}` : 'Guest checked in'
       },
       include: {
         room: true,

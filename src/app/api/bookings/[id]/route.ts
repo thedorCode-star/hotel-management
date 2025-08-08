@@ -56,7 +56,7 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
     
-    const { status, checkIn, checkOut, notes } = body;
+    const { status, checkIn, checkOut } = body;
 
     // Check if booking exists
     const existingBooking = await db.booking.findUnique({
@@ -200,8 +200,6 @@ export async function PUT(
         ...(checkOut && { checkOut: new Date(checkOut) }),
         ...(body.roomId && { roomId: body.roomId }),
         ...(newTotalPrice !== undefined && { totalPrice: newTotalPrice }),
-        ...(notes && { notes: notes }),
-        paidAmount: (existingBooking as any).paidAmount === 0 ? (existingBooking as any).totalPrice : (existingBooking as any).paidAmount
       },
       include: {
         user: {

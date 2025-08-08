@@ -92,6 +92,57 @@ export default function BookingActions({ booking, onAction }: BookingActionsProp
     }
   };
 
+  const handleRefund = async () => {
+    try {
+      const refundAmount = booking.refundAmount || 0;
+      const totalPaid = booking.paidAmount || 0;
+      const availableForRefund = totalPaid - refundAmount;
+
+      if (availableForRefund <= 0) {
+        alert('No amount available for refund');
+        return;
+      }
+
+      const amount = prompt(`Enter refund amount (max: $${availableForRefund.toFixed(2)}):`, availableForRefund.toString());
+      if (!amount || parseFloat(amount) <= 0) return;
+
+      const refundAmountNum = parseFloat(amount);
+      if (refundAmountNum > availableForRefund) {
+        alert(`Refund amount cannot exceed $${availableForRefund.toFixed(2)}`);
+        return;
+      }
+
+      const refundMethod = prompt('Enter refund method (STRIPE/CASH/BANK_TRANSFER/CREDIT_TO_ACCOUNT):', 'CASH');
+      if (!refundMethod) return;
+
+      const notes = prompt('Enter refund notes (optional):', '');
+
+      const response = await fetch('/api/refunds', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          bookingId: booking.id,
+          amount: refundAmountNum,
+          refundMethod: refundMethod.toUpperCase(),
+          notes,
+        }),
+      });
+
+      if (response.ok) {
+        alert('Refund created successfully!');
+        onAction();
+      } else {
+        const error = await response.json();
+        alert(`Failed to create refund: ${error.error}`);
+      }
+    } catch (error) {
+      console.error('Error creating refund:', error);
+      alert('Failed to create refund');
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'PENDING': return 'text-yellow-600 bg-yellow-100';
@@ -163,6 +214,18 @@ export default function BookingActions({ booking, onAction }: BookingActionsProp
           <div className="text-xs text-green-600">
             Refunded: ${booking.refundAmount.toFixed(2)}
           </div>
+        )}
+
+        {/* Refund Button */}
+        {['PAID', 'CHECKED_IN', 'COMPLETED'].includes(booking.status) && booking.paidAmount > 0 && (
+          <button
+            onClick={handleRefund}
+            className="text-purple-600 hover:text-purple-900 flex items-center"
+            title="Process refund"
+          >
+            <DollarSign className="h-4 w-4 mr-1" />
+            Refund
+          </button>
         )}
       </div>
 
