@@ -44,6 +44,9 @@ interface DashboardStats {
   };
   revenue: {
     today: number;
+    checkInToday: number;
+    stayingToday: number;
+    bookingsMadeToday: number;
     weekly: number;
     monthly: number;
     pending: number;
@@ -348,6 +351,29 @@ export default function DashboardPage() {
                       formatCurrency(stats?.revenue.today || 0)
                     )}
                   </p>
+                  {/* Revenue Breakdown */}
+                  {stats && !isStatsLoading && (
+                    <div className="mt-2 space-y-1">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-gray-500">Check-ins:</span>
+                        <span className="text-green-600 font-medium">
+                          {formatCurrency(stats.revenue.checkInToday)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-gray-500">Staying:</span>
+                        <span className="text-blue-600 font-medium">
+                          {formatCurrency(stats.revenue.stayingToday)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-gray-500">New bookings:</span>
+                        <span className="text-purple-600 font-medium">
+                          {formatCurrency(stats.revenue.bookingsMadeToday)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
               {stats && (
@@ -420,6 +446,83 @@ export default function DashboardPage() {
                   </p>
                 </div>
                 <CreditCard className="h-8 w-8 text-purple-600" />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Comprehensive Revenue Insights */}
+        {stats && !isStatsLoading && (
+          <div className="bg-white rounded-lg shadow p-6 mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Revenue Insights</h3>
+              <div className="text-sm text-gray-500">
+                <details className="cursor-pointer">
+                  <summary className="hover:text-gray-700">What do these metrics mean?</summary>
+                  <div className="mt-2 p-3 bg-gray-50 rounded-lg text-xs space-y-1">
+                    <p><strong>Check-ins Today:</strong> Revenue from guests checking in today</p>
+                    <p><strong>Guests Staying:</strong> Revenue from guests currently staying (check-in ≤ today ≤ check-out)</p>
+                    <p><strong>New Bookings:</strong> Revenue from bookings created today</p>
+                    <p><strong>Total Processed:</strong> Actual payments processed today</p>
+                  </div>
+                </details>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-green-50 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-green-800">Check-ins Today</p>
+                    <p className="text-2xl font-bold text-green-900">
+                      {formatCurrency(stats.revenue.checkInToday)}
+                    </p>
+                  </div>
+                  <div className="bg-green-100 rounded-full p-2">
+                    <Calendar className="h-5 w-5 text-green-600" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-blue-50 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-blue-800">Guests Staying</p>
+                    <p className="text-2xl font-bold text-blue-900">
+                      {formatCurrency(stats.revenue.stayingToday)}
+                    </p>
+                  </div>
+                  <div className="bg-blue-100 rounded-full p-2">
+                    <Users className="h-5 w-5 text-blue-600" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-purple-50 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-purple-800">New Bookings</p>
+                    <p className="text-2xl font-bold text-purple-900">
+                      {formatCurrency(stats.revenue.bookingsMadeToday)}
+                    </p>
+                  </div>
+                  <div className="bg-purple-100 rounded-full p-2">
+                    <Plus className="h-5 w-5 text-purple-600" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-yellow-50 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-yellow-800">Total Processed</p>
+                    <p className="text-2xl font-bold text-yellow-900">
+                      {formatCurrency(stats.revenue.today)}
+                    </p>
+                  </div>
+                  <div className="bg-yellow-100 rounded-full p-2">
+                    <CreditCard className="h-5 w-5 text-yellow-600" />
+                  </div>
+                </div>
               </div>
             </div>
           </div>

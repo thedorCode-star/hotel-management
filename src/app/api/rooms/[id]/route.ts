@@ -70,7 +70,7 @@ export async function PUT(
         bookings: {
           where: {
             status: {
-              in: ['PENDING', 'CONFIRMED']
+              in: ['PENDING', 'PAID', 'CHECKED_IN']
             }
           }
         }
@@ -188,7 +188,7 @@ export async function DELETE(
 
     // Check if room has active bookings
     const activeBookings = (existingRoom as any).bookings.filter(
-      (booking: any) => booking.status === 'CONFIRMED' || booking.status === 'PENDING'
+      (booking: any) => booking.status === 'PAID' || booking.status === 'PENDING' || booking.status === 'CHECKED_IN'
     );
 
     if (activeBookings.length > 0) {

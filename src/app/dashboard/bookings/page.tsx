@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import BookingForm from './components/BookingForm';
 import PaymentModal from './components/PaymentModal';
+import BookingActions from './components/BookingActions';
 import { CreditCard, DollarSign } from 'lucide-react';
 
 interface User {
@@ -26,8 +27,13 @@ interface Booking {
   userId: string;
   checkIn: string;
   checkOut: string;
+  actualCheckOut?: string;
   totalPrice: number;
   status: string;
+  paidAmount: number;
+  refundAmount: number;
+  paymentRequired: boolean;
+  notes?: string;
   createdAt: string;
   user: User;
   room: Room;
@@ -187,16 +193,15 @@ export default function BookingsPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'CONFIRMED':
-        return 'bg-green-100 text-green-800';
-      case 'PENDING':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'CANCELLED':
-        return 'bg-red-100 text-red-800';
-      case 'COMPLETED':
-        return 'bg-blue-100 text-blue-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+      case 'PENDING': return 'text-yellow-600 bg-yellow-100';
+      case 'PAYMENT_PENDING': return 'text-orange-600 bg-orange-100';
+      case 'PAID': return 'text-blue-600 bg-blue-100';
+      case 'CHECKED_IN': return 'text-green-600 bg-green-100';
+      case 'CHECKED_OUT': return 'text-purple-600 bg-purple-100';
+      case 'COMPLETED': return 'text-gray-600 bg-gray-100';
+      case 'CANCELLED': return 'text-red-600 bg-red-100';
+      case 'REFUNDED': return 'text-indigo-600 bg-indigo-100';
+      default: return 'text-gray-600 bg-gray-100';
     }
   };
 
@@ -317,7 +322,7 @@ export default function BookingsPage() {
                   Dates
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Total
+                  Payment
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
@@ -355,14 +360,25 @@ export default function BookingsPage() {
                     <div className="text-sm text-gray-500">
                       {getDaysBetween(booking.checkIn, booking.checkOut)} nights
                     </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    ${booking.totalPrice.toFixed(2)}
+                    {booking.actualCheckOut && (
+                      <div className="text-xs text-purple-600">
+                        Checked out: {formatDate(booking.actualCheckOut)}
+                      </div>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(booking.status)}`}>
-                      {booking.status}
-                    </span>
+                    <div className="text-sm text-gray-900">
+                      <div>Total: ${booking.totalPrice.toFixed(2)}</div>
+                      {booking.paidAmount > 0 && (
+                        <div className="text-green-600">Paid: ${booking.paidAmount.toFixed(2)}</div>
+                      )}
+                      {booking.refundAmount > 0 && (
+                        <div className="text-purple-600">Refunded: ${booking.refundAmount.toFixed(2)}</div>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <BookingActions booking={booking} onAction={fetchBookings} />
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
@@ -387,15 +403,16 @@ export default function BookingsPage() {
                         </button>
                       )}
                       
+                      {/* Legacy status buttons for backward compatibility */}
                       {booking.status === 'PENDING' && (
                         <button
-                          onClick={() => handleStatusUpdate(booking.id, 'CONFIRMED')}
+                          onClick={() => handleStatusUpdate(booking.id, 'PAID')}
                           className="text-green-600 hover:text-green-900"
                         >
                           Confirm
                         </button>
                       )}
-                      {booking.status === 'CONFIRMED' && (
+                      {booking.status === 'PAID' && (
                         <button
                           onClick={() => handleStatusUpdate(booking.id, 'COMPLETED')}
                           className="text-blue-600 hover:text-blue-900"
@@ -403,7 +420,7 @@ export default function BookingsPage() {
                           Complete
                         </button>
                       )}
-                      {(booking.status === 'PENDING' || booking.status === 'CONFIRMED') && (
+                      {(booking.status === 'PENDING' || booking.status === 'PAID') && (
                         <button
                           onClick={() => handleStatusUpdate(booking.id, 'CANCELLED')}
                           className="text-red-600 hover:text-red-900"

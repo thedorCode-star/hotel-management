@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { CheckIn, CheckOut, CreditCard, DollarSign, AlertCircle } from 'lucide-react';
+import { LogIn, LogOut, CreditCard, DollarSign, AlertCircle } from 'lucide-react';
 
 interface BookingActionsProps {
   booking: {
@@ -111,8 +111,8 @@ export default function BookingActions({ booking, onAction }: BookingActionsProp
       case 'PENDING': return <AlertCircle className="h-4 w-4" />;
       case 'PAYMENT_PENDING': return <CreditCard className="h-4 w-4" />;
       case 'PAID': return <DollarSign className="h-4 w-4" />;
-      case 'CHECKED_IN': return <CheckIn className="h-4 w-4" />;
-      case 'CHECKED_OUT': return <CheckOut className="h-4 w-4" />;
+      case 'CHECKED_IN': return <LogIn className="h-4 w-4" />;
+      case 'CHECKED_OUT': return <LogOut className="h-4 w-4" />;
       default: return null;
     }
   };
@@ -134,7 +134,7 @@ export default function BookingActions({ booking, onAction }: BookingActionsProp
             disabled={isLoading}
             className="inline-flex items-center px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 disabled:opacity-50"
           >
-            <CheckIn className="h-3 w-3 mr-1" />
+            <LogIn className="h-3 w-3 mr-1" />
             Check In
           </button>
         )}
@@ -146,7 +146,7 @@ export default function BookingActions({ booking, onAction }: BookingActionsProp
             disabled={isLoading}
             className="inline-flex items-center px-3 py-1 bg-purple-600 text-white text-xs rounded hover:bg-purple-700 disabled:opacity-50"
           >
-            <CheckOut className="h-3 w-3 mr-1" />
+            <LogOut className="h-3 w-3 mr-1" />
             Check Out
           </button>
         )}
