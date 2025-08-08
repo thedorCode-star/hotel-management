@@ -254,10 +254,10 @@ export default function DashboardPage() {
         {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow p-6 border-l-4 border-indigo-500">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <Bed className="h-8 w-8 text-indigo-600" />
+            <div className="flex items-start justify-between">
+              <div className="flex items-start">
+                <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center">
+                  <Bed className="h-5 w-5 text-indigo-600" />
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-500">Total Rooms</p>
@@ -272,20 +272,20 @@ export default function DashboardPage() {
               </div>
               {stats && (
                 <div className="text-right">
-                  <p className="text-xs text-gray-500">Available</p>
-                  <p className="text-sm font-medium text-green-600">
+                  <p className="text-xs text-gray-500 mb-1">Available</p>
+                  <span className="inline-flex items-center rounded-full bg-green-50 border border-green-200 text-green-700 px-2.5 py-0.5 text-xs font-medium">
                     {stats.rooms.available}
-                  </p>
+                  </span>
                 </div>
               )}
             </div>
           </div>
 
           <div className="bg-white rounded-lg shadow p-6 border-l-4 border-green-500">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <Calendar className="h-8 w-8 text-green-600" />
+            <div className="flex items-start justify-between">
+              <div className="flex items-start">
+                <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center">
+                  <Calendar className="h-5 w-5 text-green-600" />
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-500">Active Bookings</p>
@@ -300,20 +300,20 @@ export default function DashboardPage() {
               </div>
               {stats && (
                 <div className="text-right">
-                  <p className="text-xs text-gray-500">Today</p>
-                  <p className="text-sm font-medium text-blue-600">
+                  <p className="text-xs text-gray-500 mb-1">Today</p>
+                  <span className="inline-flex items-center rounded-full bg-blue-50 border border-blue-200 text-blue-700 px-2.5 py-0.5 text-xs font-medium">
                     {stats.bookings.today}
-                  </p>
+                  </span>
                 </div>
               )}
             </div>
           </div>
 
           <div className="bg-white rounded-lg shadow p-6 border-l-4 border-purple-500">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <Users className="h-8 w-8 text-purple-600" />
+            <div className="flex items-start justify-between">
+              <div className="flex items-start">
+                <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center">
+                  <Users className="h-5 w-5 text-purple-600" />
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-500">Guests Today</p>
@@ -328,20 +328,20 @@ export default function DashboardPage() {
               </div>
               {stats && (
                 <div className="text-right">
-                  <p className="text-xs text-gray-500">This Month</p>
-                  <p className="text-sm font-medium text-purple-600">
+                  <p className="text-xs text-gray-500 mb-1">This Month</p>
+                  <span className="inline-flex items-center rounded-full bg-purple-50 border border-purple-200 text-purple-700 px-2.5 py-0.5 text-xs font-medium">
                     {stats.guests.uniqueThisMonth}
-                  </p>
+                  </span>
                 </div>
               )}
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6 border-l-4 border-yellow-500">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <CreditCard className="h-8 w-8 text-yellow-600" />
+          <div className="bg-white rounded-lg shadow p-6 border-l-4 border-yellow-500 overflow-hidden">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start">
+                <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-yellow-50 flex items-center justify-center">
+                  <CreditCard className="h-5 w-5 text-yellow-600" />
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-500">Revenue Today</p>
@@ -377,15 +377,15 @@ export default function DashboardPage() {
                   )}
                 </div>
               </div>
-              {stats && (
-                <div className="text-right">
-                  <p className="text-xs text-gray-500">Net This Month</p>
-                  <p className="text-sm font-medium text-yellow-600">
-                    {formatCurrency(stats.revenue.netRevenue)}
-                  </p>
-                </div>
-              )}
             </div>
+            {stats && (
+              <div className="mt-6">
+                <div className="bg-gradient-to-r from-yellow-50 to-amber-50 rounded-2xl p-4 border border-yellow-200/50 w-full md:w-auto">
+                  <p className="text-xs text-gray-500">Net This Month</p>
+                  <p className="text-xl font-semibold text-yellow-600">{formatCurrency(stats.revenue.netRevenue)}</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -393,17 +393,19 @@ export default function DashboardPage() {
         {stats && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between">
+              <div className="flex items-start justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-500">Occupancy Rate</p>
                   <p className="text-2xl font-semibold text-gray-900">{stats.rooms.occupancyRate}%</p>
                 </div>
-                <TrendingUp className="h-8 w-8 text-blue-600" />
+                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+                  <TrendingUp className="h-5 w-5 text-blue-600" />
+                </div>
               </div>
             </div>
 
             <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between">
+              <div className="flex items-start justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-500">Payment Success Rate</p>
                   <p className="text-2xl font-semibold text-gray-900">
@@ -414,12 +416,14 @@ export default function DashboardPage() {
                     )}
                   </p>
                 </div>
-                <BarChart3 className="h-8 w-8 text-green-600" />
+                <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center">
+                  <BarChart3 className="h-5 w-5 text-green-600" />
+                </div>
               </div>
             </div>
 
             <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between">
+              <div className="flex items-start justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-500">Pending Revenue</p>
                   <p className="text-2xl font-semibold text-gray-900">
@@ -430,12 +434,14 @@ export default function DashboardPage() {
                     )}
                   </p>
                 </div>
-                <Calendar className="h-8 w-8 text-orange-600" />
+                <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center">
+                  <Calendar className="h-5 w-5 text-orange-600" />
+                </div>
               </div>
             </div>
 
             <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between">
+              <div className="flex items-start justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-500">Average Payment</p>
                   <p className="text-2xl font-semibold text-gray-900">
@@ -446,24 +452,29 @@ export default function DashboardPage() {
                     )}
                   </p>
                 </div>
-                <CreditCard className="h-8 w-8 text-purple-600" />
+                <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center">
+                  <CreditCard className="h-5 w-5 text-purple-600" />
+                </div>
               </div>
             </div>
 
-            {/* **NEW: Refunded Revenue Display */}
+            {/* **FIXED: Refunded Revenue Display - Shows as negative impact */}
             <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between">
+              <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-500">Refunded This Month</p>
+                  <p className="text-sm font-medium text-gray-500">Refunds This Month</p>
                   <p className="text-2xl font-semibold text-red-600">
                     {isStatsLoading ? (
                       <span className="inline-block animate-pulse bg-gray-200 h-8 w-16 rounded"></span>
                     ) : (
-                      formatCurrency(stats?.revenue?.refunded || 0)
+                      `-${formatCurrency(stats?.revenue?.refunded || 0)}`
                     )}
                   </p>
+                  <p className="text-xs text-gray-500 mt-1">Deducted from revenue</p>
                 </div>
-                <ArrowDownRight className="h-8 w-8 text-red-600" />
+                <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
+                  <ArrowDownRight className="h-5 w-5 text-red-600" />
+                </div>
               </div>
             </div>
           </div>
@@ -550,78 +561,78 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <Link
             href="/dashboard/bookings"
-            className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow group"
+            className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200/60 shadow p-6 transition-all transform-gpu hover:-translate-y-1 hover:shadow-xl group"
           >
-            <div className="flex items-center justify-center w-12 h-12 bg-indigo-100 rounded-lg mb-4 group-hover:bg-indigo-200 transition-colors">
+            <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-indigo-50 ring-1 ring-indigo-200/40 mb-4 transition-colors transition-transform duration-200 group-hover:bg-indigo-100 group-hover:scale-105">
               <Calendar className="h-6 w-6 text-indigo-600" />
             </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Manage Bookings</h3>
-            <p className="text-gray-600">
+            <p className="text-gray-600 leading-relaxed">
               View, create, and manage all hotel bookings and reservations.
             </p>
           </Link>
 
           <Link
             href="/dashboard/rooms"
-            className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow group"
+            className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200/60 shadow p-6 transition-all transform-gpu hover:-translate-y-1 hover:shadow-xl group"
           >
-            <div className="flex items-center justify-center w-12 h-12 bg-green-100 rounded-lg mb-4 group-hover:bg-green-200 transition-colors">
+            <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-green-50 ring-1 ring-green-200/40 mb-4 transition-colors transition-transform duration-200 group-hover:bg-green-100 group-hover:scale-105">
               <Building2 className="h-6 w-6 text-green-600" />
             </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Room Management</h3>
-            <p className="text-gray-600">
+            <p className="text-gray-600 leading-relaxed">
               Manage room availability, status, and room information.
             </p>
           </Link>
 
           <Link
             href="/dashboard/guests"
-            className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow group"
+            className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200/60 shadow p-6 transition-all transform-gpu hover:-translate-y-1 hover:shadow-xl group"
           >
-            <div className="flex items-center justify-center w-12 h-12 bg-purple-100 rounded-lg mb-4 group-hover:bg-purple-200 transition-colors">
+            <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-purple-50 ring-1 ring-purple-200/40 mb-4 transition-colors transition-transform duration-200 group-hover:bg-purple-100 group-hover:scale-105">
               <Users className="h-6 w-6 text-purple-600" />
             </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Guest Management</h3>
-            <p className="text-gray-600">
+            <p className="text-gray-600 leading-relaxed">
               Manage guest profiles, preferences, and contact information.
             </p>
           </Link>
 
           <Link
             href="/dashboard/reviews"
-            className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow group"
+            className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200/60 shadow p-6 transition-all transform-gpu hover:-translate-y-1 hover:shadow-xl group"
           >
-            <div className="flex items-center justify-center w-12 h-12 bg-yellow-100 rounded-lg mb-4 group-hover:bg-yellow-200 transition-colors">
+            <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-yellow-50 ring-1 ring-yellow-200/40 mb-4 transition-colors transition-transform duration-200 group-hover:bg-yellow-100 group-hover:scale-105">
               <Star className="h-6 w-6 text-yellow-600" />
             </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Reviews & Ratings</h3>
-            <p className="text-gray-600">
+            <p className="text-gray-600 leading-relaxed">
               View and manage guest reviews and ratings for rooms and services.
             </p>
           </Link>
 
           <Link
             href="/dashboard/analytics"
-            className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow group"
+            className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200/60 shadow p-6 transition-all transform-gpu hover:-translate-y-1 hover:shadow-xl group"
           >
-            <div className="flex items-center justify-center w-12 h-12 bg-blue-100 rounded-lg mb-4 group-hover:bg-blue-200 transition-colors">
+            <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-blue-50 ring-1 ring-blue-200/40 mb-4 transition-colors transition-transform duration-200 group-hover:bg-blue-100 group-hover:scale-105">
               <BarChart3 className="h-6 w-6 text-blue-600" />
             </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Analytics</h3>
-            <p className="text-gray-600">
+            <p className="text-gray-600 leading-relaxed">
               View detailed analytics and reports on hotel performance.
             </p>
           </Link>
 
           <Link
             href="/dashboard/settings"
-            className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow group"
+            className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200/60 shadow p-6 transition-all transform-gpu hover:-translate-y-1 hover:shadow-xl group"
           >
-            <div className="flex items-center justify-center w-12 h-12 bg-gray-100 rounded-lg mb-4 group-hover:bg-gray-200 transition-colors">
+            <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gray-50 ring-1 ring-gray-200/40 mb-4 transition-colors transition-transform duration-200 group-hover:bg-gray-100 group-hover:scale-105">
               <Plus className="h-6 w-6 text-gray-600" />
             </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Settings</h3>
-            <p className="text-gray-600">
+            <p className="text-gray-600 leading-relaxed">
               Configure hotel settings, user permissions, and system preferences.
             </p>
           </Link>

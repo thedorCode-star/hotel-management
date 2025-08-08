@@ -128,6 +128,22 @@ export default function BookingsPage() {
 
   const handleStatusUpdate = async (bookingId: string, newStatus: string) => {
     try {
+      // **ENHANCED: Payment validation for COMPLETED status**
+      if (newStatus === 'COMPLETED') {
+        const booking = bookings.find(b => b.id === bookingId);
+        if (booking && booking.paidAmount < booking.totalPrice) {
+          const required = booking.totalPrice.toFixed(2);
+          const paid = booking.paidAmount.toFixed(2);
+          const shouldProceed = confirm(`Payment incomplete. Required: $${required}, Paid: $${paid}. Would you like to process payment now?`);
+          if (shouldProceed) {
+            handlePaymentClick(booking);
+            return;
+          } else {
+            return;
+          }
+        }
+      }
+
       const response = await fetch(`/api/bookings/${bookingId}`, {
         method: 'PUT',
         headers: {
@@ -138,19 +154,14 @@ export default function BookingsPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        const errorMessage = errorData.error || 'Failed to update booking';
-        
-        // Display error message in UI instead of throwing
-        setError(errorMessage);
-        console.error('Booking update failed:', errorMessage);
+        setError(errorData.error || 'Failed to update booking status');
         return;
       }
 
-      await fetchBookings();
-      setError(''); // Clear any existing errors
+      fetchBookings();
     } catch (error) {
-      console.error('Error updating booking:', error);
-      setError('Failed to update booking. Please try again.');
+      console.error('Error updating booking status:', error);
+      setError('Failed to update booking status');
     }
   };
 
@@ -414,7 +425,11 @@ export default function BookingsPage() {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <BookingActions booking={booking} onAction={fetchBookings} />
+                    <BookingActions 
+                      booking={booking} 
+                      onAction={fetchBookings}
+                      onPaymentRequest={handlePaymentClick}
+                    />
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
@@ -448,7 +463,9 @@ export default function BookingsPage() {
                           Confirm
                         </button>
                       )}
-                      {booking.status === 'PAID' && (
+                      
+                      {/* **FIXED: Complete button only shows when payment is completed */}
+                      {booking.status === 'PAID' && booking.paidAmount >= booking.totalPrice && (
                         <button
                           onClick={() => handleStatusUpdate(booking.id, 'COMPLETED')}
                           className="text-blue-600 hover:text-blue-900"
@@ -456,6 +473,14 @@ export default function BookingsPage() {
                           Complete
                         </button>
                       )}
+                      
+                      {/* **NEW: Payment required warning for PAID status without full payment */}
+                      {booking.status === 'PAID' && booking.paidAmount < booking.totalPrice && (
+                        <span className="text-orange-600 text-xs">
+                          ⚠️ Payment incomplete
+                        </span>
+                      )}
+                      
                       {(booking.status === 'PENDING' || booking.status === 'PAID') && (
                         <button
                           onClick={() => handleStatusUpdate(booking.id, 'CANCELLED')}

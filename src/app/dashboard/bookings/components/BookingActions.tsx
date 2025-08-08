@@ -18,15 +18,27 @@ interface BookingActionsProps {
     };
   };
   onAction: () => void;
+  onPaymentRequest?: (booking: any) => void; // **NEW: Callback for payment requests**
 }
 
-export default function BookingActions({ booking, onAction }: BookingActionsProps) {
+export default function BookingActions({ booking, onAction, onPaymentRequest }: BookingActionsProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [checkoutReason, setCheckoutReason] = useState('');
   const [checkoutDate, setCheckoutDate] = useState('');
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentIncompleteMessage, setPaymentIncompleteMessage] = useState('');
 
   const handleCheckIn = async () => {
+    // **ENHANCED: Payment validation before check-in**
+    if (booking.paidAmount < booking.totalPrice) {
+      const required = booking.totalPrice.toFixed(2);
+      const paid = booking.paidAmount.toFixed(2);
+      setPaymentIncompleteMessage(`Payment incomplete. Required: $${required}, Paid: $${paid}. Please process payment first.`);
+      setShowPaymentModal(true);
+      return;
+    }
+
     setIsLoading(true);
     try {
       const response = await fetch(`/api/bookings/${booking.id}/checkin`, {
@@ -50,6 +62,18 @@ export default function BookingActions({ booking, onAction }: BookingActionsProp
       alert('Failed to check in');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handlePayNow = () => {
+    setShowPaymentModal(false);
+    // **ENHANCED: Use the payment request callback to open the existing payment modal**
+    if (onPaymentRequest) {
+      onPaymentRequest(booking);
+    } else {
+      // Fallback: show alert if no payment handler is provided
+      const amount = booking.totalPrice - booking.paidAmount;
+      alert(`Redirecting to payment for $${amount.toFixed(2)}. Please complete the payment to proceed with check-in.`);
     }
   };
 
@@ -231,13 +255,21 @@ export default function BookingActions({ booking, onAction }: BookingActionsProp
 
       {/* Check-out Modal */}
       {showCheckoutModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-            <h3 className="text-lg font-semibold mb-4">Early Check-out</h3>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-white to-gray-50 rounded-3xl p-6 w-full max-w-md mx-auto max-h-[90vh] flex flex-col shadow-2xl border border-gray-200/50 overflow-hidden">
+            <div className="flex justify-between items-center mb-6 flex-shrink-0">
+              <h3 className="text-xl font-bold text-gray-900">Early Check-out</h3>
+              <button
+                onClick={() => setShowCheckoutModal(false)}
+                className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors"
+              >
+                <span className="text-gray-500 font-bold">×</span>
+              </button>
+            </div>
             
-            <div className="space-y-4">
+            <div className="flex-1 space-y-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Check-out Date *
                 </label>
                 <input
@@ -246,43 +278,81 @@ export default function BookingActions({ booking, onAction }: BookingActionsProp
                   onChange={(e) => setCheckoutDate(e.target.value)}
                   min={new Date().toISOString().split('T')[0]}
                   max={new Date(booking.checkOut).toISOString().split('T')[0]}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white shadow-sm"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Reason (Optional)
                 </label>
                 <textarea
                   value={checkoutReason}
                   onChange={(e) => setCheckoutReason(e.target.value)}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white shadow-sm resize-none"
                   placeholder="Reason for early check-out..."
                 />
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
-                <p className="text-sm text-blue-600">
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-4 border border-blue-200/50 overflow-hidden">
+                <p className="text-sm font-medium text-blue-800 leading-relaxed break-words whitespace-normal">
                   <strong>Note:</strong> Early check-out will automatically calculate and process refunds for unused days.
                 </p>
               </div>
             </div>
 
-            <div className="flex space-x-3 pt-4">
+            <div className="flex space-x-4 pt-6 flex-shrink-0">
               <button
                 onClick={() => setShowCheckoutModal(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                className="flex-1 px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 font-semibold hover:bg-gray-50 transition-all duration-200"
               >
                 Cancel
               </button>
               <button
                 onClick={handleCheckOut}
                 disabled={isLoading || !checkoutDate}
-                className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50"
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               >
                 {isLoading ? 'Processing...' : 'Check Out'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Incomplete Modal */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-white to-gray-50 rounded-3xl p-6 w-full max-w-md mx-auto max-h-[90vh] flex flex-col shadow-2xl border border-gray-200/50 overflow-hidden">
+            <div className="flex justify-between items-center mb-6 flex-shrink-0">
+              <h3 className="text-xl font-bold text-gray-900">Payment Incomplete</h3>
+              <button
+                onClick={() => setShowPaymentModal(false)}
+                className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors"
+              >
+                <span className="text-gray-500 font-bold">×</span>
+              </button>
+            </div>
+            
+            <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-2xl p-4 border border-orange-200/50 mb-6 overflow-hidden">
+              <p className="text-sm font-medium text-orange-800 break-words whitespace-normal leading-relaxed">
+                {paymentIncompleteMessage}
+              </p>
+            </div>
+            
+            <div className="flex space-x-4 flex-shrink-0">
+              <button
+                onClick={() => setShowPaymentModal(false)}
+                className="flex-1 px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 font-semibold hover:bg-gray-50 transition-all duration-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handlePayNow}
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-200"
+              >
+                Pay Now
               </button>
             </div>
           </div>

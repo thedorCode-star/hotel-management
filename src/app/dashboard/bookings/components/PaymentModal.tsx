@@ -123,15 +123,16 @@ export default function PaymentModal({ isOpen, onClose, booking, onPaymentSucces
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">Complete Payment</h2>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-gradient-to-br from-white to-gray-50 rounded-3xl p-6 w-full max-w-md mx-auto max-h-[90vh] flex flex-col shadow-2xl border border-gray-200/50 overflow-hidden">
+        <div className="flex justify-between items-center mb-6 flex-shrink-0">
+          <h2 className="text-xl font-bold text-gray-900">Complete Payment</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
+            className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors"
+            aria-label="Close"
           >
-            <X className="h-6 w-6" />
+            <X className="h-5 w-5 text-gray-500" />
           </button>
         </div>
 
@@ -151,10 +152,10 @@ export default function PaymentModal({ isOpen, onClose, booking, onPaymentSucces
           </div>
         )}
 
-        <div className="mb-4">
-          <div className="bg-gray-50 p-4 rounded-md mb-4">
-            <h3 className="font-medium text-gray-900 mb-2">Booking Details</h3>
-            <div className="space-y-1 text-sm text-gray-600">
+        <div className="flex-1">
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-4 mb-6 border border-blue-200/50">
+            <h3 className="font-semibold text-blue-900 mb-2">Booking Details</h3>
+            <div className="space-y-1 text-sm text-blue-800">
               <p><span className="font-medium">Room:</span> {booking.room.number} ({booking.room.type})</p>
               <p><span className="font-medium">Guest:</span> {booking.user.name}</p>
               <p><span className="font-medium">Dates:</span> {new Date(booking.checkIn).toLocaleDateString()} - {new Date(booking.checkOut).toLocaleDateString()}</p>
@@ -165,37 +166,37 @@ export default function PaymentModal({ isOpen, onClose, booking, onPaymentSucces
           {isStripeConfigured ? (
             <form onSubmit={handleSubmit}>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Card Information
                 </label>
-                <div className="border border-gray-300 rounded-md p-3">
+                <div className="border border-gray-300 rounded-xl p-3 bg-white shadow-sm">
                   <CardElement options={cardElementOptions} />
                 </div>
               </div>
 
               {error && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                <div className="mb-4 p-4 bg-gradient-to-r from-red-50 to-pink-50 border border-red-200/50 rounded-2xl">
                   <div className="flex items-center">
-                    <AlertCircle className="h-5 w-5 text-red-400 mr-2" />
-                    <p className="text-sm text-red-700">{error}</p>
+                    <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
+                    <p className="text-sm text-red-700 font-medium break-words whitespace-normal leading-relaxed">{error}</p>
                   </div>
                 </div>
               )}
 
               {success && (
-                <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-md">
+                <div className="mb-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200/50 rounded-2xl">
                   <div className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-green-400 mr-2" />
-                    <p className="text-sm text-green-700">Payment successful!</p>
+                    <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                    <p className="text-sm text-green-700 font-medium">Payment successful!</p>
                   </div>
                 </div>
               )}
 
-              <div className="flex space-x-3">
+              <div className="flex space-x-4 pt-6 flex-shrink-0">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                  className="flex-1 px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 font-semibold hover:bg-gray-50 transition-all duration-200"
                   disabled={isProcessing}
                 >
                   Cancel
@@ -203,7 +204,7 @@ export default function PaymentModal({ isOpen, onClose, booking, onPaymentSucces
                 <button
                   type="submit"
                   disabled={isProcessing || !isStripeConfigured}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center"
                 >
                   {isProcessing ? (
                     <>
@@ -226,7 +227,7 @@ export default function PaymentModal({ isOpen, onClose, booking, onPaymentSucces
               </p>
               <button
                 onClick={onClose}
-                className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+                className="px-6 py-3 bg-gray-600 text-white rounded-xl hover:bg-gray-700"
               >
                 Close
               </button>
