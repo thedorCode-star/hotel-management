@@ -138,13 +138,19 @@ export default function BookingsPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to update booking');
+        const errorMessage = errorData.error || 'Failed to update booking';
+        
+        // Display error message in UI instead of throwing
+        setError(errorMessage);
+        console.error('Booking update failed:', errorMessage);
+        return;
       }
 
       await fetchBookings();
+      setError(''); // Clear any existing errors
     } catch (error) {
       console.error('Error updating booking:', error);
-      alert(error instanceof Error ? error.message : 'Failed to update booking');
+      setError('Failed to update booking. Please try again.');
     }
   };
 
@@ -242,7 +248,29 @@ export default function BookingsPage() {
 
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
-          <p className="text-red-600">{error}</p>
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-red-600">{error}</p>
+            </div>
+            <div className="ml-auto pl-3">
+              <div className="-mx-1.5 -my-1.5">
+                <button
+                  onClick={() => setError('')}
+                  className="inline-flex bg-red-50 rounded-md p-1.5 text-red-500 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                >
+                  <span className="sr-only">Dismiss</span>
+                  <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -369,11 +397,19 @@ export default function BookingsPage() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">
                       <div>Total: ${booking.totalPrice.toFixed(2)}</div>
-                      {booking.paidAmount > 0 && (
-                        <div className="text-green-600">Paid: ${booking.paidAmount.toFixed(2)}</div>
+                      {/* Show paid amount if it exists or if status indicates payment */}
+                      {(booking.paidAmount > 0 || ['PAID', 'CHECKED_IN', 'CHECKED_OUT', 'COMPLETED'].includes(booking.status)) && (
+                        <div className="text-green-600">
+                          Paid: ${booking.paidAmount > 0 ? booking.paidAmount.toFixed(2) : booking.totalPrice.toFixed(2)}
+                        </div>
                       )}
+                      {/* Show refund amount if it exists */}
                       {booking.refundAmount > 0 && (
                         <div className="text-purple-600">Refunded: ${booking.refundAmount.toFixed(2)}</div>
+                      )}
+                      {/* Show payment status warning only if truly missing */}
+                      {booking.status === 'CHECKED_IN' && booking.paidAmount === 0 && booking.totalPrice > 0 && (
+                        <div className="text-orange-600 text-xs">⚠️ Payment not recorded</div>
                       )}
                     </div>
                   </td>

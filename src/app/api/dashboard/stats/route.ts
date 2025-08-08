@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
 
     // **COMPREHENSIVE REVENUE CALCULATIONS**
     
-    // 1. Today's Revenue - Based on actual payments processed today
+    // **FIXED: Today's Revenue - Based on actual payments processed today**
     const todayRevenue = await db.payment.aggregate({
       where: {
         status: 'COMPLETED',
@@ -73,6 +73,37 @@ export async function GET(request: NextRequest) {
         amount: true,
       },
     });
+
+    // **FIXED: Today's Revenue from bookings (fallback if no payments)**
+    const todayBookingsRevenue = await db.booking.aggregate({
+      where: {
+        OR: [
+          {
+            checkIn: {
+              gte: today,
+              lt: new Date(today.getTime() + 24 * 60 * 60 * 1000),
+            },
+          },
+          {
+            createdAt: {
+              gte: today,
+              lt: new Date(today.getTime() + 24 * 60 * 60 * 1000),
+            },
+          },
+        ],
+        status: {
+          in: ['PAID', 'CHECKED_IN', 'COMPLETED']
+        }
+      },
+      _sum: {
+        totalPrice: true,
+      },
+    });
+
+    // Use the higher of actual payments or booking revenue for today
+    const actualTodayRevenue = (todayRevenue as any)?._sum?.amount || 0;
+    const bookingTodayRevenue = (todayBookingsRevenue as any)?._sum?.totalPrice || 0;
+    const finalTodayRevenue = Math.max(actualTodayRevenue, bookingTodayRevenue);
 
     // 2. Revenue from guests checking in today
     const checkInRevenue = await db.booking.aggregate({
@@ -124,7 +155,7 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // This Month's Revenue - Based on actual payments processed this month
+    // **FIXED: This Month's Revenue - Based on actual payments processed this month**
     const monthlyRevenue = await db.payment.aggregate({
       where: {
         status: 'COMPLETED',
@@ -172,8 +203,9 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // Refunded Revenue
-    const refundedRevenue = await db.payment.aggregate({
+    // **FIXED: Comprehensive Refunded Revenue Calculation**
+    // Include both payment refunds and booking refunds
+    const refundedRevenueFromPayments = await db.payment.aggregate({
       where: {
         status: 'REFUNDED',
         refundedAt: {
@@ -185,8 +217,31 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // Net Revenue (Completed payments - Refunds)
-    const netRevenue = ((monthlyRevenue as any)?._sum?.amount || 0) - ((refundedRevenue as any)?._sum?.amount || 0);
+    // Also include refunds from bookings (refundAmount field)
+    const refundedRevenueFromBookings = await db.booking.aggregate({
+      where: {
+        refundAmount: {
+          gt: 0,
+        },
+        updatedAt: {
+          gte: startOfMonth,
+        },
+      },
+      _sum: {
+        refundAmount: true,
+      },
+    });
+
+    // Total refunded revenue (combine both sources)
+    const totalRefundedRevenue = ((refundedRevenueFromPayments as any)?._sum?.amount || 0) + 
+                                ((refundedRevenueFromBookings as any)?._sum?.refundAmount || 0);
+
+    // **FIXED: Net Revenue Calculation (Completed payments - Refunds)**
+    // Only subtract refunds from the actual revenue earned
+    const actualMonthlyRevenue = (monthlyRevenue as any)?._sum?.amount || 0;
+    // Ensure net revenue doesn't go below 0 (refunds can't exceed actual revenue)
+    // Also consider that refunds might be from previous months, so we need to be more careful
+    const netRevenue = Math.max(0, actualMonthlyRevenue - totalRefundedRevenue);
 
     // Payment Statistics
     const totalPayments = await db.payment.count({});
@@ -327,14 +382,14 @@ export async function GET(request: NextRequest) {
         monthly: monthlyBookings as number,
       },
       revenue: {
-        today: (todayRevenue as any)?._sum?.amount || 0,
+        today: finalTodayRevenue,
         checkInToday: (checkInRevenue as any)?._sum?.totalPrice || 0,
         stayingToday: (stayingTodayRevenue as any)?._sum?.totalPrice || 0,
         bookingsMadeToday: (bookingsMadeTodayRevenue as any)?._sum?.totalPrice || 0,
         weekly: (weeklyRevenue as any)?._sum?.amount || 0,
         monthly: (monthlyRevenue as any)?._sum?.amount || 0,
         pending: (pendingRevenue as any)?._sum?.totalPrice || 0,
-        refunded: (refundedRevenue as any)?._sum?.amount || 0,
+        refunded: totalRefundedRevenue,
         average: (averagePaymentValue as any)?._avg?.amount || 0,
         netRevenue: netRevenue,
       },

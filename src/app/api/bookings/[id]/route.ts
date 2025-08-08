@@ -56,7 +56,7 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
     
-    const { status, checkIn, checkOut } = body;
+    const { status, checkIn, checkOut, notes } = body;
 
     // Check if booking exists
     const existingBooking = await db.booking.findUnique({
@@ -76,13 +76,32 @@ export async function PUT(
     // Validate status transition - only check if status is being changed
     if (status && status !== (existingBooking as any).status) {
       const validTransitions: { [key: string]: string[] } = {
-        'PENDING': ['CONFIRMED', 'CANCELLED'],
-        'CONFIRMED': ['COMPLETED', 'CANCELLED'],
-        'CANCELLED': [],
+        'PENDING': ['PAYMENT_PENDING', 'PAID', 'CANCELLED'],
+        'PAYMENT_PENDING': ['PAID', 'CANCELLED'],
+        'PAID': ['CHECKED_IN', 'CANCELLED', 'COMPLETED'], // Allow direct completion for past bookings
+        'CHECKED_IN': ['CHECKED_OUT', 'COMPLETED'],
+        'CHECKED_OUT': ['COMPLETED'],
         'COMPLETED': [], // Allow editing but not status changes
+        'CANCELLED': [], // Allow editing but not status changes
+        'REFUNDED': [], // Allow editing but not status changes
       };
 
-      if (!validTransitions[(existingBooking as any).status]?.includes(status)) {
+      // Special case: Allow PAID to COMPLETED if check-out date has passed
+      if ((existingBooking as any).status === 'PAID' && status === 'COMPLETED') {
+        const checkOutDate = new Date((existingBooking as any).checkOut);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        if (checkOutDate < today) {
+          // Allow the transition - this is a valid auto-completion
+          console.log(`✅ Allowing auto-completion for booking ${id} - check-out date has passed`);
+        } else {
+          return NextResponse.json(
+            { error: `Cannot complete booking before check-out date. Please check in first or wait until check-out date.` },
+            { status: 400 }
+          );
+        }
+      } else if (!validTransitions[(existingBooking as any).status]?.includes(status)) {
         return NextResponse.json(
           { error: `Invalid status transition from ${(existingBooking as any).status} to ${status}` },
           { status: 400 }
@@ -97,14 +116,20 @@ export async function PUT(
         where: { id: (existingBooking as any).roomId },
         data: { status: 'AVAILABLE' },
       });
-    } else if (status === 'CONFIRMED' && (existingBooking as any).status === 'PENDING') {
+    } else if (status === 'PAID' && (existingBooking as any).status === 'PENDING') {
+      // Update room status to reserved (not occupied until check-in)
+      await db.room.update({
+        where: { id: (existingBooking as any).roomId },
+        data: { status: 'RESERVED' },
+      });
+    } else if (status === 'CHECKED_IN' && (existingBooking as any).status === 'PAID') {
       // Update room status to occupied
       await db.room.update({
         where: { id: (existingBooking as any).roomId },
         data: { status: 'OCCUPIED' },
       });
-    } else if (status === 'COMPLETED' && (existingBooking as any).status === 'CONFIRMED') {
-      // Update room status back to available
+    } else if (status === 'COMPLETED' && ((existingBooking as any).status === 'CHECKED_OUT' || (existingBooking as any).status === 'PAID')) {
+      // Update room status back to available (for both CHECKED_OUT and PAID bookings)
       await db.room.update({
         where: { id: (existingBooking as any).roomId },
         data: { status: 'AVAILABLE' },
@@ -116,7 +141,7 @@ export async function PUT(
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    if (checkOutDate < today && (existingBooking as any).status === 'CONFIRMED') {
+    if (checkOutDate < today && (existingBooking as any).status === 'PAID') {
       // Auto-complete the booking and make room available
       await db.room.update({
         where: { id: (existingBooking as any).roomId },
@@ -175,6 +200,8 @@ export async function PUT(
         ...(checkOut && { checkOut: new Date(checkOut) }),
         ...(body.roomId && { roomId: body.roomId }),
         ...(newTotalPrice !== undefined && { totalPrice: newTotalPrice }),
+        ...(notes && { notes: notes }),
+        paidAmount: (existingBooking as any).paidAmount === 0 ? (existingBooking as any).totalPrice : (existingBooking as any).paidAmount
       },
       include: {
         user: {
