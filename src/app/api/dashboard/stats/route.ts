@@ -18,6 +18,9 @@ export async function GET(request: NextRequest) {
     // Fix room status for completed payments
     await fixRoomStatusForCompletedPayments(db);
 
+    // **FIXED: Implement proper financial reconciliation**
+    const financialReconciliation = await reconcileFinancials(db, startOfMonth, now);
+
     // Room Statistics
     const totalRooms = await db.room.count({});
     const availableRooms = await db.room.count({
@@ -58,10 +61,10 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // **COMPREHENSIVE REVENUE CALCULATIONS**
+    // **FIXED: Single source of truth for revenue calculations**
     
-    // 1. Today's Revenue - Based on actual payments processed today
-    const todayRevenue = await db.payment.aggregate({
+    // 1. Actual Revenue (from completed payments only)
+    const actualRevenueToday = await db.payment.aggregate({
       where: {
         status: 'COMPLETED',
         processedAt: {
@@ -74,71 +77,7 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // 2. Revenue from guests checking in today
-    const checkInRevenue = await db.booking.aggregate({
-      where: {
-        checkIn: {
-          gte: today,
-          lt: new Date(today.getTime() + 24 * 60 * 60 * 1000),
-        },
-        status: {
-          in: ['PAID', 'CHECKED_IN', 'COMPLETED']
-        }
-      },
-      _sum: {
-        totalPrice: true,
-      },
-    });
-
-    // 3. Revenue from guests staying today (check-in <= today <= check-out)
-    const stayingTodayRevenue = await db.booking.aggregate({
-      where: {
-        checkIn: {
-          lte: new Date(today.getTime() + 24 * 60 * 60 * 1000),
-        },
-        checkOut: {
-          gt: today,
-        },
-        status: {
-          in: ['PAID', 'CHECKED_IN', 'COMPLETED']
-        }
-      },
-      _sum: {
-        totalPrice: true,
-      },
-    });
-
-    // 4. Revenue from bookings made today
-    const bookingsMadeTodayRevenue = await db.booking.aggregate({
-      where: {
-        createdAt: {
-          gte: today,
-          lt: new Date(today.getTime() + 24 * 60 * 60 * 1000),
-        },
-        status: {
-          in: ['PAID', 'CHECKED_IN', 'COMPLETED']
-        }
-      },
-      _sum: {
-        totalPrice: true,
-      },
-    });
-
-    // This Month's Revenue - Based on actual payments processed this month
-    const monthlyRevenue = await db.payment.aggregate({
-      where: {
-        status: 'COMPLETED',
-        processedAt: {
-          gte: startOfMonth,
-        },
-      },
-      _sum: {
-        amount: true,
-      },
-    });
-
-    // Weekly Revenue
-    const weeklyRevenue = await db.payment.aggregate({
+    const actualRevenueWeekly = await db.payment.aggregate({
       where: {
         status: 'COMPLETED',
         processedAt: {
@@ -150,7 +89,106 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // Pending Revenue (bookings with pending payments or pending status)
+    const actualRevenueMonthly = await db.payment.aggregate({
+      where: {
+        status: 'COMPLETED',
+        processedAt: {
+          gte: startOfMonth,
+        },
+      },
+      _sum: {
+        amount: true,
+      },
+    });
+
+    // 2. Promised Revenue (from confirmed bookings - for forecasting)
+    const promisedRevenueToday = await db.booking.aggregate({
+      where: {
+        checkIn: {
+          gte: today,
+          lt: new Date(today.getTime() + 24 * 60 * 60 * 1000),
+        },
+        status: {
+          in: ['PAID', 'CHECKED_IN', 'COMPLETED']
+        }
+      },
+      _sum: {
+        totalPrice: true,
+      },
+    });
+
+    const promisedRevenueWeekly = await db.booking.aggregate({
+      where: {
+        checkIn: {
+          gte: startOfWeek,
+        },
+        status: {
+          in: ['PAID', 'CHECKED_IN', 'COMPLETED']
+        }
+      },
+      _sum: {
+        totalPrice: true,
+      },
+    });
+
+    const promisedRevenueMonthly = await db.booking.aggregate({
+      where: {
+        checkIn: {
+          gte: startOfMonth,
+        },
+        status: {
+          in: ['PAID', 'CHECKED_IN', 'COMPLETED']
+        }
+      },
+      _sum: {
+        totalPrice: true,
+      },
+    });
+
+    // 3. **FIXED: Refund calculations using only Refund model (no double-counting)**
+    const refundsToday = await db.refund.aggregate({
+      where: {
+        status: 'COMPLETED',
+        processedAt: {
+          gte: today,
+          lt: new Date(today.getTime() + 24 * 60 * 60 * 1000),
+        },
+      },
+      _sum: {
+        amount: true,
+      },
+    });
+
+    const refundsWeekly = await db.refund.aggregate({
+      where: {
+        status: 'COMPLETED',
+        processedAt: {
+          gte: startOfWeek,
+        },
+      },
+      _sum: {
+        amount: true,
+      },
+    });
+
+    const refundsMonthly = await db.refund.aggregate({
+      where: {
+        status: 'COMPLETED',
+        processedAt: {
+          gte: startOfMonth,
+        },
+      },
+      _sum: {
+        amount: true,
+      },
+    });
+
+    // 4. **FIXED: Net Revenue calculations (Actual - Refunds)**
+    const netRevenueToday = Math.max(0, (actualRevenueToday._sum?.amount || 0) - (refundsToday._sum?.amount || 0));
+    const netRevenueWeekly = Math.max(0, (actualRevenueWeekly._sum?.amount || 0) - (refundsWeekly._sum?.amount || 0));
+    const netRevenueMonthly = Math.max(0, (actualRevenueMonthly._sum?.amount || 0) - (refundsMonthly._sum?.amount || 0));
+
+    // 5. **FIXED: Pending Revenue (bookings with pending payments)**
     const pendingRevenue = await db.booking.aggregate({
       where: {
         OR: [
@@ -171,27 +209,6 @@ export async function GET(request: NextRequest) {
         totalPrice: true,
       },
     });
-
-    // **FIXED: Comprehensive Refunded Revenue Calculation**
-    // Use only the new Refund model to avoid double-counting
-    const refundedRevenueFromRefundModel = await db.refund.aggregate({
-      where: {
-        status: 'COMPLETED',
-        processedAt: {
-          gte: startOfMonth,
-        },
-      },
-      _sum: {
-        amount: true,
-      },
-    });
-
-    // **FIXED: Total refunded revenue (use only Refund model)**
-    const totalRefundedRevenue = ((refundedRevenueFromRefundModel as any)?._sum?.amount || 0);
-
-    // **FIXED: Net Revenue Calculation (Completed payments - Refunds)**
-    // Refunds should be SUBTRACTED from revenue, not added
-    const netRevenue = Math.max(0, ((monthlyRevenue as any)?._sum?.amount || 0) - totalRefundedRevenue);
 
     // Payment Statistics
     const totalPayments = await db.payment.count({});
@@ -331,17 +348,40 @@ export async function GET(request: NextRequest) {
         weekly: weeklyBookings as number,
         monthly: monthlyBookings as number,
       },
+      // **FIXED: Restructured revenue calculations with clear separation**
       revenue: {
-        today: (todayRevenue as any)?._sum?.amount || 0,
-        checkInToday: (checkInRevenue as any)?._sum?.totalPrice || 0,
-        stayingToday: (stayingTodayRevenue as any)?._sum?.totalPrice || 0,
-        bookingsMadeToday: (bookingsMadeTodayRevenue as any)?._sum?.totalPrice || 0,
-        weekly: (weeklyRevenue as any)?._sum?.amount || 0,
-        monthly: (monthlyRevenue as any)?._sum?.amount || 0,
-        pending: (pendingRevenue as any)?._sum?.totalPrice || 0,
-        refunded: totalRefundedRevenue,
-        average: (averagePaymentValue as any)?._avg?.amount || 0,
-        netRevenue: netRevenue,
+        // Actual money received (from completed payments)
+        actual: {
+          today: (actualRevenueToday._sum?.amount || 0),
+          weekly: (actualRevenueWeekly._sum?.amount || 0),
+          monthly: (actualRevenueMonthly._sum?.amount || 0),
+        },
+        // Promised revenue (from confirmed bookings - for forecasting)
+        promised: {
+          today: (promisedRevenueToday._sum?.totalPrice || 0),
+          weekly: (promisedRevenueWeekly._sum?.totalPrice || 0),
+          monthly: (promisedRevenueMonthly._sum?.totalPrice || 0),
+        },
+        // Net revenue (actual - refunds)
+        net: {
+          today: netRevenueToday,
+          weekly: netRevenueWeekly,
+          monthly: netRevenueMonthly,
+        },
+        // Refunds (single source of truth from Refund model)
+        refunds: {
+          today: (refundsToday._sum?.amount || 0),
+          weekly: (refundsWeekly._sum?.amount || 0),
+          monthly: (refundsMonthly._sum?.amount || 0),
+        },
+        // Legacy fields for backward compatibility (deprecated)
+        today: (actualRevenueToday._sum?.amount || 0),
+        weekly: (actualRevenueWeekly._sum?.amount || 0),
+        monthly: (actualRevenueMonthly._sum?.amount || 0),
+        pending: (pendingRevenue._sum?.totalPrice || 0),
+        refunded: (refundsMonthly._sum?.amount || 0),
+        average: (averagePaymentValue._avg?.amount || 0),
+        netRevenue: netRevenueMonthly,
       },
       payments: {
         total: totalPayments as number,
@@ -360,6 +400,8 @@ export async function GET(request: NextRequest) {
       }, {} as { [key: string]: number }),
       recentBookings,
       recentPayments,
+      // **NEW: Financial reconciliation data**
+      financialReconciliation,
     };
 
     return NextResponse.json({ stats });
@@ -369,6 +411,73 @@ export async function GET(request: NextRequest) {
       { error: 'Failed to fetch dashboard stats' },
       { status: 500 }
     );
+  }
+}
+
+// **NEW: Financial reconciliation function**
+async function reconcileFinancials(db: any, startDate: Date, endDate: Date) {
+  try {
+    console.log('🔍 Starting financial reconciliation...');
+    
+    // Get all completed payments in date range
+    const payments = await db.payment.aggregate({
+      where: {
+        status: 'COMPLETED',
+        processedAt: { gte: startDate, lte: endDate }
+      },
+      _sum: { amount: true },
+      _count: { id: true }
+    });
+
+    // Get all completed refunds in date range
+    const refunds = await db.refund.aggregate({
+      where: {
+        status: 'COMPLETED',
+        processedAt: { gte: startDate, lte: endDate }
+      },
+      _sum: { amount: true },
+      _count: { id: true }
+    });
+
+    // Calculate net revenue
+    const grossRevenue = (payments._sum?.amount || 0);
+    const totalRefunds = (refunds._sum?.amount || 0);
+    const netRevenue = Math.max(0, grossRevenue - totalRefunds);
+    
+    // Calculate refund rate
+    const refundRate = grossRevenue > 0 ? (totalRefunds / grossRevenue) * 100 : 0;
+
+    console.log(`💰 Financial Reconciliation Results:`);
+    console.log(`   Gross Revenue: $${grossRevenue.toFixed(2)}`);
+    console.log(`   Total Refunds: $${totalRefunds.toFixed(2)}`);
+    console.log(`   Net Revenue: $${netRevenue.toFixed(2)}`);
+    console.log(`   Refund Rate: ${refundRate.toFixed(2)}%`);
+
+    return {
+      grossRevenue,
+      totalRefunds,
+      netRevenue,
+      refundRate: parseFloat(refundRate.toFixed(2)),
+      paymentCount: payments._count?.id || 0,
+      refundCount: refunds._count?.id || 0,
+      reconciliationDate: new Date(),
+      startDate,
+      endDate
+    };
+  } catch (error) {
+    console.error('Error in financial reconciliation:', error);
+    return {
+      grossRevenue: 0,
+      totalRefunds: 0,
+      netRevenue: 0,
+      refundRate: 0,
+      paymentCount: 0,
+      refundCount: 0,
+      reconciliationDate: new Date(),
+      startDate,
+      endDate,
+      error: 'Reconciliation failed'
+    };
   }
 }
 

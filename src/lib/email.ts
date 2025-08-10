@@ -1,5 +1,10 @@
 import nodemailer from 'nodemailer';
 
+// Check if email is properly configured
+export const isEmailConfigured = () => {
+  return !!(process.env.SMTP_USER && process.env.SMTP_PASS);
+};
+
 // Email configuration
 export const emailConfig = {
   host: process.env.SMTP_HOST || 'smtp.gmail.com',
@@ -11,8 +16,27 @@ export const emailConfig = {
   },
 };
 
-// Create transporter
-export const transporter = nodemailer.createTransport(emailConfig);
+// Create transporter only if credentials are available
+export const transporter = isEmailConfigured() 
+  ? nodemailer.createTransport(emailConfig)
+  : null;
+
+// Verify email configuration
+export const verifyEmailConfig = async () => {
+  if (!transporter) {
+    console.warn('⚠️ Email not configured. Set SMTP_USER and SMTP_PASS in .env.local');
+    return false;
+  }
+  
+  try {
+    await transporter.verify();
+    console.log('✅ Email configuration verified successfully');
+    return true;
+  } catch (error) {
+    console.error('❌ Email configuration verification failed:', error);
+    return false;
+  }
+};
 
 // Email templates
 export const emailTemplates = {
@@ -236,6 +260,11 @@ export const emailTemplates = {
 
 // Email sending functions
 export const sendEmail = async (to: string, template: keyof typeof emailTemplates, data: any) => {
+  if (!transporter) {
+    console.error('Email transporter not configured. Cannot send email.');
+    return { success: false, error: 'Email transporter not configured' };
+  }
+
   try {
     const emailContent = emailTemplates[template](data);
     

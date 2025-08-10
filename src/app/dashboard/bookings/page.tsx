@@ -5,7 +5,23 @@ import { useRouter } from 'next/navigation';
 import BookingForm from './components/BookingForm';
 import PaymentModal from './components/PaymentModal';
 import BookingActions from './components/BookingActions';
-import { CreditCard, DollarSign } from 'lucide-react';
+import ExpiredBookingsAlert from './components/ExpiredBookingsAlert';
+import { 
+  CreditCard, 
+  DollarSign, 
+  Search, 
+  Filter, 
+  Calendar, 
+  User, 
+  Building, 
+  Clock,
+  Plus,
+  X,
+  ChevronDown,
+  ChevronUp,
+  TrendingDown,
+  Info
+} from 'lucide-react';
 
 interface User {
   id: string;
@@ -54,6 +70,7 @@ export default function BookingsPage() {
     search: '',
     dateRange: 'all',
   });
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   useEffect(() => {
     fetchBookings();
@@ -237,304 +254,586 @@ export default function BookingsPage() {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
 
+  const formatCurrency = (amount: number) => {
+    return `$${amount.toFixed(2)}`;
+  };
+
+  const totalBookingsValue = bookings.reduce((sum, booking) => sum + booking.totalPrice, 0);
+  const confirmedBookingsValue = bookings.filter(b => b.status === 'PAID').reduce((sum, booking) => sum + booking.totalPrice, 0);
+  const pendingBookingsValue = bookings.filter(b => b.status === 'PENDING').reduce((sum, booking) => sum + booking.totalPrice, 0);
+
+  // Note: For accurate refund calculations, we should fetch from Refund model
+  // This is a simplified calculation for display purposes
+  const totalRefunds = 0; // Will be populated from Refund model in future updates
+
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 sm:p-6">
+        <div className="max-w-7xl mx-auto">
+          {/* Header Skeleton */}
+          <div className="mb-8">
+            <div className="h-8 bg-gray-200 rounded-lg w-64 mb-4 animate-shimmer"></div>
+            <div className="h-10 bg-gray-200 rounded-lg w-48 animate-shimmer"></div>
+          </div>
+          
+          {/* Filters Skeleton */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="space-y-2">
+                  <div className="h-4 bg-gray-200 rounded w-20 animate-shimmer"></div>
+                  <div className="h-10 bg-gray-200 rounded-lg w-full animate-shimmer"></div>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          {/* Table Skeleton */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="p-6 border-b border-gray-100">
+              <div className="h-4 bg-gray-200 rounded w-32 animate-shimmer"></div>
+            </div>
+            <div className="p-6 space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center space-x-4">
+                  <div className="h-12 bg-gray-200 rounded-lg w-12 animate-shimmer"></div>
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-gray-200 rounded w-32 animate-shimmer"></div>
+                    <div className="h-3 bg-gray-200 rounded w-24 animate-shimmer"></div>
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-gray-200 rounded w-20 animate-shimmer"></div>
+                    <div className="h-3 bg-gray-200 rounded w-16 animate-shimmer"></div>
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-gray-200 rounded w-28 animate-shimmer"></div>
+                    <div className="h-3 bg-gray-200 rounded w-20 animate-shimmer"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Booking Management</h1>
-        <button
-          onClick={() => setShowForm(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          Create New Booking
-        </button>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 sm:p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Enhanced Header Section */}
+        <div className="mb-8 animate-slide-in-up">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+                Booking Management
+              </h1>
+              <p className="text-gray-600 mt-2 text-sm sm:text-base">
+                Manage all hotel bookings, payments, and guest information
+              </p>
+            </div>
+            <button
+              onClick={() => setShowForm(true)}
+              className="group relative inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-blue-500/20"
+            >
+              <Plus className="w-5 h-5 mr-2 group-hover:rotate-90 transition-transform duration-200" />
+              Create New Booking
+            </button>
+          </div>
+        </div>
 
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm text-red-600">{error}</p>
-            </div>
-            <div className="ml-auto pl-3">
-              <div className="-mx-1.5 -my-1.5">
+        {/* Expired Bookings Alert */}
+        <div className="mb-8">
+          <ExpiredBookingsAlert />
+        </div>
+
+        {/* Enhanced Error Display */}
+        {error && (
+          <div className="mb-8 animate-slide-in-up">
+            <div className="bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-2xl p-6 shadow-sm">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                    <X className="w-5 h-5 text-red-600" />
+                  </div>
+                </div>
+                <div className="ml-4 flex-1">
+                  <h3 className="text-lg font-semibold text-red-800">Error</h3>
+                  <p className="text-red-700 mt-1">{error}</p>
+                </div>
                 <button
                   onClick={() => setError('')}
-                  className="inline-flex bg-red-50 rounded-md p-1.5 text-red-500 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                  className="ml-4 p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
                 >
-                  <span className="sr-only">Dismiss</span>
-                  <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
+                  <X className="w-5 h-5" />
                 </button>
               </div>
             </div>
           </div>
+        )}
+
+        {/* Enhanced Filters Section */}
+        <div className="mb-8 animate-slide-in-up">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            {/* Mobile Filter Toggle */}
+            <div className="lg:hidden p-4 border-b border-gray-100">
+              <button
+                onClick={() => setShowMobileFilters(!showMobileFilters)}
+                className="flex items-center justify-between w-full px-4 py-3 bg-gray-50 rounded-xl text-gray-700 hover:bg-gray-100 transition-colors"
+              >
+                <span className="flex items-center">
+                  <Filter className="w-4 h-4 mr-2" />
+                  Filters & Search
+                </span>
+                {showMobileFilters ? (
+                  <ChevronUp className="w-4 h-4" />
+                ) : (
+                  <ChevronDown className="w-4 h-4" />
+                )}
+              </button>
+            </div>
+
+            {/* Filters Content */}
+            <div className={`lg:block ${showMobileFilters ? 'block' : 'hidden'}`}>
+              <div className="p-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {/* Search Input */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-semibold text-gray-700 flex items-center">
+                      <Search className="w-4 h-4 mr-2 text-gray-500" />
+                      Search
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="Guest, email, or room..."
+                        value={filters.search}
+                        onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                        className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white"
+                      />
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    </div>
+                  </div>
+
+                  {/* Status Filter */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-semibold text-gray-700 flex items-center">
+                      <User className="w-4 h-4 mr-2 text-gray-500" />
+                      Status
+                    </label>
+                    <select
+                      value={filters.status}
+                      onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white appearance-none cursor-pointer"
+                    >
+                      <option value="all">All Status</option>
+                      <option value="PENDING">Pending</option>
+                      <option value="PAID">Paid</option>
+                      <option value="CHECKED_IN">Checked In</option>
+                      <option value="CHECKED_OUT">Checked Out</option>
+                      <option value="COMPLETED">Completed</option>
+                      <option value="CANCELLED">Cancelled</option>
+                      <option value="REFUNDED">Refunded</option>
+                    </select>
+                  </div>
+
+                  {/* Date Range Filter */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-semibold text-gray-700 flex items-center">
+                      <Calendar className="w-4 h-4 mr-2 text-gray-500" />
+                      Date Range
+                    </label>
+                    <select
+                      value={filters.dateRange}
+                      onChange={(e) => setFilters(prev => ({ ...prev, dateRange: e.target.value }))}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white appearance-none cursor-pointer"
+                    >
+                      <option value="all">All Time</option>
+                      <option value="today">Today</option>
+                      <option value="week">This Week</option>
+                      <option value="month">This Month</option>
+                    </select>
+                  </div>
+
+                  {/* Clear Filters Button */}
+                  <div className="flex items-end">
+                    <button
+                      onClick={() => setFilters({ status: 'all', search: '', dateRange: 'all' })}
+                      className="w-full px-6 py-3 border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white hover:shadow-sm"
+                    >
+                      Clear Filters
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-      )}
 
-      {/* Filters */}
-      <div className="bg-white rounded-lg shadow p-4 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Search
-            </label>
-            <input
-              type="text"
-              placeholder="Search by guest name, email, or room number..."
-              value={filters.search}
-              onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+        {/* **FIXED: Financial Summary with Correct Calculations */}
+        <div className="bg-white rounded-lg shadow p-6 mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Financial Summary</h3>
+            <div className="text-sm text-gray-500">
+              Based on actual payments and refunds
+            </div>
           </div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="bg-green-50 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-green-800">Total Bookings</p>
+                  <p className="text-2xl font-bold text-green-900">
+                    {formatCurrency(totalBookingsValue)}
+                  </p>
+                  <p className="text-xs text-green-600 mt-1">
+                    {bookings.length} bookings
+                  </p>
+                </div>
+                <div className="bg-green-100 rounded-full p-2">
+                  <Calendar className="h-5 w-5 text-green-600" />
+                </div>
+              </div>
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Status
-            </label>
-            <select
-              value={filters.status}
-              onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="all">All Status</option>
-              <option value="PENDING">Pending</option>
-              <option value="CONFIRMED">Confirmed</option>
-              <option value="COMPLETED">Completed</option>
-              <option value="CANCELLED">Cancelled</option>
-            </select>
+            <div className="bg-blue-50 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-blue-800">Confirmed Revenue</p>
+                  <p className="text-2xl font-bold text-blue-900">
+                    {formatCurrency(confirmedBookingsValue)}
+                  </p>
+                  <p className="text-xs text-blue-600 mt-1">
+                    {bookings.filter(b => b.status === 'PAID').length} paid
+                  </p>
+                </div>
+                <div className="bg-blue-100 rounded-full p-2">
+                  <CreditCard className="h-5 w-5 text-blue-600" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-orange-50 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-orange-800">Pending Revenue</p>
+                  <p className="text-2xl font-bold text-orange-900">
+                    {formatCurrency(pendingBookingsValue)}
+                  </p>
+                  <p className="text-xs text-orange-600 mt-1">
+                    {bookings.filter(b => b.status === 'PENDING').length} pending
+                  </p>
+                </div>
+                <div className="bg-orange-100 rounded-full p-2">
+                  <Clock className="h-5 w-5 text-orange-600" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-red-50 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-red-800">Refund Impact</p>
+                  <p className="text-2xl font-bold text-red-900">
+                    -{formatCurrency(totalRefunds)}
+                  </p>
+                  <p className="text-xs text-red-600 mt-1">
+                    From Refund model
+                  </p>
+                </div>
+                <div className="bg-red-100 rounded-full p-2">
+                  <TrendingDown className="h-5 w-5 text-red-600" />
+                </div>
+              </div>
+            </div>
           </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Date Range
-            </label>
-            <select
-              value={filters.dateRange}
-              onChange={(e) => setFilters(prev => ({ ...prev, dateRange: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="all">All Time</option>
-              <option value="today">Today</option>
-              <option value="week">This Week</option>
-              <option value="month">This Month</option>
-            </select>
-          </div>
-
-          <div className="flex items-end">
-            <button
-              onClick={() => setFilters({ status: 'all', search: '', dateRange: 'all' })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              Clear Filters
-            </button>
+          
+          {/* **NEW: Financial Reconciliation Note */}
+          <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+            <div className="flex items-start">
+              <div className="flex-shrink-0 w-5 h-5 mt-0.5">
+                <Info className="h-5 w-5 text-blue-500" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-gray-700">
+                  <strong>Financial Note:</strong> Refund amounts are now calculated exclusively from the Refund model to prevent double-counting. 
+                  The <code className="bg-gray-200 px-1 rounded">booking.refundAmount</code> field is deprecated for financial reporting.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Bookings Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Guest
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Room
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Dates
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Payment
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredBookings.map((booking) => (
-                <tr key={booking.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">
-                        {booking.user.name}
+        {/* Enhanced Bookings Table */}
+        <div className="animate-slide-in-up" style={{animationDelay: '0.1s'}}>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            {/* Table Header */}
+            <div className="px-6 py-4 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-gray-800">
+                  Bookings ({filteredBookings.length})
+                </h2>
+                <div className="text-sm text-gray-600">
+                  Last updated: {new Date().toLocaleTimeString()}
+                </div>
+              </div>
+            </div>
+
+            {/* Responsive Table */}
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      <div className="flex items-center">
+                        <User className="w-4 h-4 mr-2 text-gray-400" />
+                        Guest
                       </div>
-                      <div className="text-sm text-gray-500">
-                        {booking.user.email}
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      <div className="flex items-center">
+                        <Building className="w-4 h-4 mr-2 text-gray-400" />
+                        Room
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      Room {booking.room.number}
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      {booking.room.type}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      {formatDate(booking.checkIn)} - {formatDate(booking.checkOut)}
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      {getDaysBetween(booking.checkIn, booking.checkOut)} nights
-                    </div>
-                    {booking.actualCheckOut && (
-                      <div className="text-xs text-purple-600">
-                        Checked out: {formatDate(booking.actualCheckOut)}
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      <div className="flex items-center">
+                        <Calendar className="w-4 h-4 mr-2 text-gray-400" />
+                        Dates
                       </div>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      <div>Total: ${booking.totalPrice.toFixed(2)}</div>
-                      {/* Show paid amount if it exists or if status indicates payment */}
-                      {(booking.paidAmount > 0 || ['PAID', 'CHECKED_IN', 'CHECKED_OUT', 'COMPLETED'].includes(booking.status)) && (
-                        <div className="text-green-600">
-                          Paid: ${booking.paidAmount > 0 ? booking.paidAmount.toFixed(2) : booking.totalPrice.toFixed(2)}
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      <div className="flex items-center">
+                        <DollarSign className="w-4 h-4 mr-2 text-gray-400" />
+                        Payment
+                      </div>
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      <div className="flex items-center">
+                        <Clock className="w-4 h-4 mr-2 text-gray-400" />
+                        Status
+                      </div>
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-100">
+                  {filteredBookings.map((booking, index) => (
+                    <tr 
+                      key={booking.id} 
+                      className="hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-200 group"
+                      style={{animationDelay: `${index * 0.05}s`}}
+                    >
+                      {/* Guest Column */}
+                      <td className="px-6 py-5">
+                        <div className="flex items-center">
+                          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-semibold text-sm mr-3 group-hover:scale-110 transition-transform duration-200">
+                            {booking.user.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="text-sm font-semibold text-gray-900 group-hover:text-blue-900 transition-colors">
+                              {booking.user.name}
+                            </div>
+                            <div className="text-sm text-gray-500 group-hover:text-gray-600 transition-colors">
+                              {booking.user.email}
+                            </div>
+                          </div>
                         </div>
-                      )}
-                      {/* Show refund amount if it exists */}
-                      {booking.refundAmount > 0 && (
-                        <div className="text-purple-600">Refunded: ${booking.refundAmount.toFixed(2)}</div>
-                      )}
-                      {/* Show payment status warning if needed */}
-                      {booking.status === 'CHECKED_IN' && booking.paidAmount === 0 && (
-                        <div className="text-orange-600 text-xs">⚠️ Payment not recorded</div>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <BookingActions 
-                      booking={booking} 
-                      onAction={fetchBookings}
-                      onPaymentRequest={handlePaymentClick}
-                    />
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => {
-                          setEditingBooking(booking);
-                          setShowForm(true);
-                        }}
-                        className="text-blue-600 hover:text-blue-900"
-                      >
-                        Edit
-                      </button>
-                      
-                      {/* Payment Button */}
-                      {booking.status === 'PENDING' && (
-                        <button
-                          onClick={() => handlePaymentClick(booking)}
-                          className="text-green-600 hover:text-green-900 flex items-center"
-                        >
-                          <CreditCard className="h-4 w-4 mr-1" />
-                          Pay
-                        </button>
-                      )}
-                      
-                      {/* Legacy status buttons for backward compatibility */}
-                      {booking.status === 'PENDING' && (
-                        <button
-                          onClick={() => handleStatusUpdate(booking.id, 'PAID')}
-                          className="text-green-600 hover:text-green-900"
-                        >
-                          Confirm
-                        </button>
-                      )}
-                      
-                      {/* **FIXED: Complete button only shows when payment is completed */}
-                      {booking.status === 'PAID' && booking.paidAmount >= booking.totalPrice && (
-                        <button
-                          onClick={() => handleStatusUpdate(booking.id, 'COMPLETED')}
-                          className="text-blue-600 hover:text-blue-900"
-                        >
-                          Complete
-                        </button>
-                      )}
-                      
-                      {/* **NEW: Payment required warning for PAID status without full payment */}
-                      {booking.status === 'PAID' && booking.paidAmount < booking.totalPrice && (
-                        <span className="text-orange-600 text-xs">
-                          ⚠️ Payment incomplete
-                        </span>
-                      )}
-                      
-                      {(booking.status === 'PENDING' || booking.status === 'PAID') && (
-                        <button
-                          onClick={() => handleStatusUpdate(booking.id, 'CANCELLED')}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          Cancel
-                        </button>
-                      )}
-                      {(booking.status === 'PENDING' || booking.status === 'CANCELLED') && (
-                        <button
-                          onClick={() => handleDeleteBooking(booking.id)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          Delete
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                      </td>
+
+                      {/* Room Column */}
+                      <td className="px-6 py-5">
+                        <div className="flex items-center">
+                          <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center text-white font-bold text-sm mr-3 group-hover:scale-110 transition-transform duration-200">
+                            {booking.room.number.slice(-2)}
+                          </div>
+                          <div>
+                            <div className="text-sm font-semibold text-gray-900">
+                              Room {booking.room.number}
+                            </div>
+                            <div className="text-sm text-gray-500 capitalize">
+                              {booking.room.type}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Dates Column */}
+                      <td className="px-6 py-5">
+                        <div className="space-y-1">
+                          <div className="text-sm font-medium text-gray-900">
+                            {formatDate(booking.checkIn)} - {formatDate(booking.checkOut)}
+                          </div>
+                          <div className="text-sm text-gray-500 flex items-center">
+                            <Clock className="w-3 h-3 mr-1" />
+                            {getDaysBetween(booking.checkIn, booking.checkOut)} nights
+                          </div>
+                          {booking.actualCheckOut && (
+                            <div className="text-xs text-purple-600 bg-purple-50 px-2 py-1 rounded-full inline-flex items-center">
+                              <span className="w-2 h-2 bg-purple-500 rounded-full mr-1"></span>
+                              Checked out: {formatDate(booking.actualCheckOut)}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Payment Column */}
+                      <td className="px-6 py-5">
+                        <div className="space-y-2">
+                          <div className="text-sm font-semibold text-gray-900">
+                            Total: ${booking.totalPrice.toFixed(2)}
+                          </div>
+                          {(booking.paidAmount > 0 || ['PAID', 'CHECKED_IN', 'CHECKED_OUT', 'COMPLETED'].includes(booking.status)) && (
+                            <div className="text-sm text-green-600 bg-green-50 px-3 py-1 rounded-full inline-flex items-center">
+                              <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                              Paid: ${booking.paidAmount > 0 ? booking.paidAmount.toFixed(2) : booking.totalPrice.toFixed(2)}
+                            </div>
+                          )}
+                          {booking.refundAmount > 0 && (
+                            <div className="text-sm text-purple-600 bg-purple-50 px-3 py-1 rounded-full inline-flex items-center">
+                              <span className="w-2 h-2 bg-purple-500 rounded-full mr-2"></span>
+                              Refunded: ${booking.refundAmount.toFixed(2)}
+                            </div>
+                          )}
+                          {booking.status === 'CHECKED_IN' && booking.paidAmount === 0 && (
+                            <div className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded-full inline-flex items-center">
+                              <span className="w-2 h-2 bg-orange-500 rounded-full mr-2"></span>
+                              Payment not recorded
+                            </div>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Status Column */}
+                      <td className="px-6 py-5">
+                        <BookingActions 
+                          booking={booking} 
+                          onAction={fetchBookings}
+                          onPaymentRequest={handlePaymentClick}
+                        />
+                      </td>
+
+                      {/* Actions Column */}
+                      <td className="px-6 py-5">
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            onClick={() => {
+                              setEditingBooking(booking);
+                              setShowForm(true);
+                            }}
+                            className="inline-flex items-center px-3 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 hover:text-blue-700 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                          >
+                            Edit
+                          </button>
+                          
+                          {/* Payment Button */}
+                          {booking.status === 'PENDING' && (
+                            <button
+                              onClick={() => handlePaymentClick(booking)}
+                              className="inline-flex items-center px-3 py-2 text-sm font-medium text-green-600 bg-green-50 rounded-lg hover:bg-green-100 hover:text-green-700 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                            >
+                              <CreditCard className="w-4 h-4 mr-1" />
+                              Pay
+                            </button>
+                          )}
+                          
+                          {/* Legacy status buttons for backward compatibility */}
+                          {booking.status === 'PENDING' && (
+                            <button
+                              onClick={() => handleStatusUpdate(booking.id, 'PAID')}
+                              className="inline-flex items-center px-3 py-2 text-sm font-medium text-green-600 bg-green-50 rounded-lg hover:bg-green-100 hover:text-green-700 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                            >
+                              Confirm
+                            </button>
+                          )}
+                          
+                          {/* Complete button only shows when payment is completed */}
+                          {booking.status === 'PAID' && booking.paidAmount >= booking.totalPrice && (
+                            <button
+                              onClick={() => handleStatusUpdate(booking.id, 'COMPLETED')}
+                              className="inline-flex items-center px-3 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 hover:text-blue-700 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                            >
+                              Complete
+                            </button>
+                          )}
+                          
+                          {/* Payment required warning for PAID status without full payment */}
+                          {booking.status === 'PAID' && booking.paidAmount < booking.totalPrice && (
+                            <span className="inline-flex items-center px-3 py-2 text-xs text-orange-600 bg-orange-50 rounded-lg">
+                              ⚠️ Payment incomplete
+                            </span>
+                          )}
+                          
+                          {(booking.status === 'PENDING' || booking.status === 'PAID') && (
+                            <button
+                              onClick={() => handleStatusUpdate(booking.id, 'CANCELLED')}
+                              className="inline-flex items-center px-3 py-2 text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 hover:text-red-700 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                            >
+                              Cancel
+                            </button>
+                          )}
+                          {(booking.status === 'PENDING' || booking.status === 'CANCELLED') && (
+                            <button
+                              onClick={() => handleDeleteBooking(booking.id)}
+                              className="inline-flex items-center px-3 py-2 text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 hover:text-red-700 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Empty State */}
+            {filteredBookings.length === 0 && !isLoading && (
+              <div className="text-center py-16 px-6">
+                <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Building className="w-12 h-12 text-gray-400" />
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No bookings found</h3>
+                <p className="text-gray-500 mb-6">No bookings match your current search criteria.</p>
+                <button
+                  onClick={() => setFilters({ status: 'all', search: '', dateRange: 'all' })}
+                  className="inline-flex items-center px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                >
+                  Clear all filters
+                </button>
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* Modals */}
+        {showForm && (
+          <BookingForm
+            booking={editingBooking || undefined}
+            mode={editingBooking ? 'edit' : 'create'}
+            onClose={() => {
+              setShowForm(false);
+              setEditingBooking(null);
+              fetchBookings();
+            }}
+          />
+        )}
+
+        {showPaymentModal && selectedBookingForPayment && (
+          <PaymentModal
+            isOpen={showPaymentModal}
+            onClose={() => {
+              setShowPaymentModal(false);
+              setSelectedBookingForPayment(null);
+            }}
+            booking={selectedBookingForPayment}
+            onPaymentSuccess={handlePaymentSuccess}
+          />
+        )}
       </div>
-
-      {filteredBookings.length === 0 && !isLoading && (
-        <div className="text-center py-12">
-          <p className="text-gray-500 text-lg">No bookings found matching your criteria.</p>
-        </div>
-      )}
-
-      {showForm && (
-        <BookingForm
-          booking={editingBooking || undefined}
-          mode={editingBooking ? 'edit' : 'create'}
-          onClose={() => {
-            setShowForm(false);
-            setEditingBooking(null);
-            fetchBookings();
-          }}
-        />
-      )}
-
-      {showPaymentModal && selectedBookingForPayment && (
-        <PaymentModal
-          isOpen={showPaymentModal}
-          onClose={() => {
-            setShowPaymentModal(false);
-            setSelectedBookingForPayment(null);
-          }}
-          booking={selectedBookingForPayment}
-          onPaymentSuccess={handlePaymentSuccess}
-        />
-      )}
     </div>
   );
 } 

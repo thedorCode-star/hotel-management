@@ -19,7 +19,12 @@ export default function Navigation() {
   const [hasRefunds, setHasRefunds] = useState(false);
 
   useEffect(() => {
-    checkAuthStatus();
+    const handler = () => checkAuthStatus();
+    window.addEventListener('auth-changed', handler);
+    checkAuthStatus(); // Initial check
+    return () => {
+      window.removeEventListener('auth-changed', handler);
+    };
   }, []);
 
   useEffect(() => {
@@ -31,26 +36,21 @@ export default function Navigation() {
   const checkAuthStatus = async () => {
     try {
       const token = localStorage.getItem('token');
-      if (!token) {
-        setIsLoading(false);
-        return;
-      }
-
-      const response = await fetch('/api/auth/me', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const response = await fetch('/api/auth/me', { headers });
 
       if (response.ok) {
         const data = await response.json();
         setUser(data.user);
       } else {
         localStorage.removeItem('token');
+        setUser(null);
       }
     } catch (error) {
       console.error('Auth check error:', error);
       localStorage.removeItem('token');
+      setUser(null);
     } finally {
       setIsLoading(false);
     }
@@ -85,6 +85,7 @@ export default function Navigation() {
       localStorage.removeItem('token');
       setUser(null);
       router.push('/');
+      window.dispatchEvent(new Event('auth-changed'));
     }
   };
 
@@ -115,7 +116,7 @@ export default function Navigation() {
             </Link>
             <div className="hidden md:ml-6 md:flex md:space-x-1">
               <Link
-                href="/rooms"
+                href={user ? "/dashboard/rooms" : "/rooms"}
                 className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50/60 transition-colors"
               >
                 Rooms
@@ -237,7 +238,7 @@ export default function Navigation() {
           <div className="md:hidden">
             <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
               <Link
-                href="/rooms"
+                href={user ? "/dashboard/rooms" : "/rooms"}
                 className="text-gray-900 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium"
                 onClick={() => setIsMenuOpen(false)}
               >

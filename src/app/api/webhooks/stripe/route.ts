@@ -144,20 +144,75 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // Get booking ID from payment record
+    // Get payment record with booking information
     const payment = await (db.payment as any).findFirst({
-      where: { transactionId: paymentIntentId }
+      where: { transactionId: paymentIntentId },
+      include: {
+        booking: {
+          select: {
+            id: true,
+            totalPrice: true,
+            paidAmount: true,
+            refundAmount: true
+          }
+        }
+      }
     });
 
     if (payment) {
-      // Update booking status to CANCELLED for full refunds
       const paymentRecord = payment as any;
-      if (paymentRecord.amount === charge.amount_refunded / 100) {
+      const refundAmount = charge.amount_refunded / 100; // Convert from cents
+      
+      // Create Refund record
+      const refund = await db.refund.create({
+        data: {
+          bookingId: paymentRecord.bookingId,
+          paymentId: paymentRecord.id,
+          amount: refundAmount,
+          refundMethod: 'STRIPE',
+          status: 'COMPLETED',
+          transactionId: charge.id,
+          processedAt: new Date(),
+          notes: `Automatic refund via Stripe for ${refundAmount}`
+        }
+      });
+
+      // **FIXED: Remove booking.refundAmount update to prevent double-counting**
+      // The Refund model is now the single source of truth for financial reporting
+      // await db.booking.update({
+      //   where: { id: paymentRecord.bookingId },
+      //   data: {
+      //     refundAmount: {
+      //       increment: refundAmount
+      //     }
+      //   }
+      // });
+
+      // Update booking status to CANCELLED for full refunds
+      // **FIXED: Calculate total refunded from Refund model instead of booking.refundAmount**
+      const totalRefundedFromRefunds = await db.refund.aggregate({
+        where: {
+          bookingId: paymentRecord.bookingId,
+          status: 'COMPLETED'
+        },
+        _sum: {
+          amount: true
+        }
+      });
+      
+      const totalRefunded = (totalRefundedFromRefunds._sum?.amount || 0);
+      const totalPaid = paymentRecord.booking.paidAmount || paymentRecord.amount;
+      
+      if (totalRefunded >= totalPaid) {
         await db.booking.update({
           where: { id: paymentRecord.bookingId },
-          data: { status: 'CANCELLED' }
+          data: { status: 'REFUNDED' }
         });
+        console.log(`✅ Booking ${paymentRecord.bookingId} marked as REFUNDED (full refund)`);
       }
+
+      console.log(`✅ Refund record created: ${refund.id} for $${refundAmount}`);
+      console.log(`ℹ️ Note: booking.refundAmount not updated to prevent double-counting`);
     }
 
     console.log(`Refund succeeded for payment ${paymentIntentId}`);

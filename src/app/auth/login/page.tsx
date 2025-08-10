@@ -57,6 +57,10 @@ export default function LoginPage() {
       
       // Store token in localStorage (in real app, use secure storage)
       localStorage.setItem('token', data.token);
+      // Notify other parts of the app (e.g., Navigation) that auth has changed
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('auth-changed'));
+      }
       
       // Redirect to dashboard
       router.push('/dashboard');

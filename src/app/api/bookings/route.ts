@@ -95,7 +95,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Get authenticated user from token
-    const token = request.cookies.get("auth-token")?.value;
+    const authHeader = request.headers.get('authorization');
+    const cookieToken = request.cookies.get('auth-token')?.value;
+    
+    let token: string | undefined;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    } else if (cookieToken) {
+      token = cookieToken;
+    }
+    
     let userId: string | null = null;
 
     if (token) {

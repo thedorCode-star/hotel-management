@@ -11,7 +11,16 @@ export async function GET(
     const paymentId = params.id;
 
     // Get user from JWT token
-    const token = request.cookies.get('auth-token')?.value;
+    const authHeader = request.headers.get('authorization');
+    const cookieToken = request.cookies.get('auth-token')?.value;
+    
+    let token: string | undefined;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    } else if (cookieToken) {
+      token = cookieToken;
+    }
+    
     let userId: string;
 
     if (token) {

@@ -13,19 +13,36 @@ export async function POST(
     
     const { actualCheckOut, reason } = body;
 
-    // Get JWT token from cookies
-    const token = request.cookies.get('auth-token')?.value;
-    let userId: string | null = null;
-    let userRole: string | null = null;
+    // Get user from JWT token
+    const authHeader = request.headers.get('authorization');
+    const cookieToken = request.cookies.get('auth-token')?.value;
+    
+    let token: string | undefined;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    } else if (cookieToken) {
+      token = cookieToken;
+    }
+    
+    let userId: string;
+    let userRole: string;
 
     if (token) {
       try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any;
         userId = decoded.userId;
-        userRole = decoded.role;
+        userRole = decoded.role || 'USER';
       } catch (error) {
-        console.error('JWT verification failed:', error);
+        return NextResponse.json(
+          { error: 'Invalid authentication token' },
+          { status: 401 }
+        );
       }
+    } else {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
     }
 
     // Check if booking exists

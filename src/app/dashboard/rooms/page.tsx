@@ -2,6 +2,23 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { 
+  Building, 
+  Users, 
+  DollarSign, 
+  Search, 
+  Filter, 
+  X, 
+  ChevronDown, 
+  ChevronUp,
+  Plus,
+  Edit,
+  Trash2,
+  Home,
+  Bed,
+  Star,
+  Crown
+} from 'lucide-react';
 import RoomForm from './components/RoomForm';
 
 interface Room {
@@ -14,6 +31,57 @@ interface Room {
   status: string;
   createdAt: string;
 }
+
+// Loading Skeleton Component
+const LoadingSkeleton = () => (
+  <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 sm:p-6">
+    <div className="max-w-7xl mx-auto">
+      {/* Header Skeleton */}
+      <div className="mb-8">
+        <div className="h-8 bg-gray-200 rounded-lg w-64 mb-4 animate-shimmer"></div>
+        <div className="h-10 bg-gray-200 rounded-lg w-48 animate-shimmer"></div>
+      </div>
+      
+      {/* Stats Skeleton */}
+      <div className="mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+              <div className="h-6 bg-gray-200 rounded w-24 mb-2 animate-shimmer"></div>
+              <div className="h-8 bg-gray-200 rounded w-16 animate-shimmer"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+      
+      {/* Filters Skeleton */}
+      <div className="mb-8">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-12 bg-gray-200 rounded-lg animate-shimmer"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+      
+      {/* Grid Skeleton */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {[1, 2, 3, 4, 5, 6].map((i) => (
+          <div key={i} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <div className="h-6 bg-gray-200 rounded w-32 mb-4 animate-shimmer"></div>
+            <div className="space-y-3">
+              <div className="h-4 bg-gray-200 rounded w-24 animate-shimmer"></div>
+              <div className="h-4 bg-gray-200 rounded w-20 animate-shimmer"></div>
+              <div className="h-4 bg-gray-200 rounded w-28 animate-shimmer"></div>
+            </div>
+            <div className="h-10 bg-gray-200 rounded-lg mt-4 animate-shimmer"></div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+);
 
 export default function RoomsPage() {
   const router = useRouter();
@@ -28,6 +96,7 @@ export default function RoomsPage() {
     type: 'all',
     search: '',
   });
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   useEffect(() => {
     fetchRooms();
@@ -101,195 +170,407 @@ export default function RoomsPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'AVAILABLE':
-        return 'bg-green-100 text-green-800';
+        return 'text-green-600 bg-green-100';
       case 'OCCUPIED':
-        return 'bg-blue-100 text-blue-800';
+        return 'text-blue-600 bg-blue-100';
       case 'MAINTENANCE':
-        return 'bg-red-100 text-red-800';
+        return 'text-red-600 bg-red-100';
       case 'RESERVED':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'text-yellow-600 bg-yellow-100';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'text-gray-600 bg-gray-100';
     }
   };
 
   const getTypeColor = (type: string) => {
     switch (type) {
       case 'SUITE':
-        return 'bg-purple-100 text-purple-800';
+        return 'text-purple-600 bg-purple-100';
       case 'DELUXE':
-        return 'bg-indigo-100 text-indigo-800';
+        return 'text-indigo-600 bg-indigo-100';
       case 'DOUBLE':
-        return 'bg-blue-100 text-blue-800';
+        return 'text-blue-600 bg-blue-100';
       case 'SINGLE':
-        return 'bg-gray-100 text-gray-800';
+        return 'text-gray-600 bg-gray-100';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'text-gray-600 bg-gray-100';
     }
   };
 
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case 'SUITE':
+        return <Crown className="h-4 w-4" />;
+      case 'DELUXE':
+        return <Star className="h-4 w-4" />;
+      case 'DOUBLE':
+        return <Bed className="h-4 w-4" />;
+      case 'SINGLE':
+        return <Home className="h-4 w-4" />;
+      default:
+        return <Building className="h-4 w-4" />;
+    }
+  };
+
+  // Calculate statistics
+  const stats = {
+    total: rooms.length,
+    available: rooms.filter(r => r.status === 'AVAILABLE').length,
+    occupied: rooms.filter(r => r.status === 'OCCUPIED').length,
+    maintenance: rooms.filter(r => r.status === 'MAINTENANCE').length,
+    reserved: rooms.filter(r => r.status === 'RESERVED').length,
+    totalRevenue: rooms.reduce((sum, r) => sum + r.price, 0)
+  };
+
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
+    return <LoadingSkeleton />;
   }
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Room Management</h1>
-        <button
-          onClick={() => setShowForm(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          Add New Room
-        </button>
-      </div>
-
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
-          <p className="text-red-600">{error}</p>
-        </div>
-      )}
-
-      {/* Filters */}
-      <div className="bg-white rounded-lg shadow p-4 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Search
-            </label>
-            <input
-              type="text"
-              placeholder="Search rooms..."
-              value={filters.search}
-              onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Status
-            </label>
-            <select
-              value={filters.status}
-              onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="all">All Status</option>
-              <option value="AVAILABLE">Available</option>
-              <option value="OCCUPIED">Occupied</option>
-              <option value="MAINTENANCE">Maintenance</option>
-              <option value="RESERVED">Reserved</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Type
-            </label>
-            <select
-              value={filters.type}
-              onChange={(e) => setFilters(prev => ({ ...prev, type: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="all">All Types</option>
-              <option value="SINGLE">Single</option>
-              <option value="DOUBLE">Double</option>
-              <option value="SUITE">Suite</option>
-              <option value="DELUXE">Deluxe</option>
-            </select>
-          </div>
-
-          <div className="flex items-end">
-            <button
-              onClick={() => setFilters({ status: 'all', type: 'all', search: '' })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              Clear Filters
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Room Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {filteredRooms.map((room) => (
-          <div key={room.id} className="bg-white rounded-lg shadow-md overflow-hidden">
-            <div className="p-4">
-              <div className="flex justify-between items-start mb-3">
-                <h3 className="text-lg font-semibold text-gray-900">Room {room.number}</h3>
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(room.status)}`}>
-                  {room.status}
-                </span>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 sm:p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Enhanced Header Section */}
+        <div className="mb-8 animate-slide-in-up">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+                Room Management
+              </h1>
+              <p className="text-gray-600 mt-2 text-sm sm:text-base">
+                Manage hotel rooms, availability, and pricing with comprehensive control
+              </p>
+            </div>
+            <div className="flex items-center space-x-4">
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-3 rounded-2xl border border-blue-200/50 shadow-sm">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600">{stats.total}</div>
+                  <div className="text-sm text-blue-600 font-medium">Total Rooms</div>
+                </div>
               </div>
+              <button
+                onClick={() => setShowForm(true)}
+                className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-3 rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center font-semibold"
+              >
+                <Plus className="h-5 w-5 mr-2" />
+                Add New Room
+              </button>
+            </div>
+          </div>
+        </div>
 
-              <div className="space-y-2 mb-4">
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Type:</span>
-                  <span className={`px-2 py-1 rounded text-xs font-medium ${getTypeColor(room.type)}`}>
-                    {room.type}
-                  </span>
+        {/* Statistics Cards */}
+        <div className="mb-8 animate-slide-in-up">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow duration-200">
+              <div className="flex items-center">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-blue-200 rounded-xl flex items-center justify-center mr-4">
+                  <Building className="w-6 h-6 text-blue-600" />
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Capacity:</span>
-                  <span className="text-sm font-medium">{room.capacity} guests</span>
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total Rooms</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Price:</span>
-                  <span className="text-sm font-medium">${room.price}/night</span>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow duration-200">
+              <div className="flex items-center">
+                <div className="w-12 h-12 bg-gradient-to-br from-green-100 to-green-200 rounded-xl flex items-center justify-center mr-4">
+                  <Home className="w-6 h-6 text-green-600" />
                 </div>
-                {room.description && (
-                  <div className="text-sm text-gray-600 mt-2">
-                    {room.description.length > 50 
-                      ? `${room.description.substring(0, 50)}...` 
-                      : room.description}
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Available</p>
+                  <p className="text-2xl font-bold text-green-600">{stats.available}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow duration-200">
+              <div className="flex items-center">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-blue-200 rounded-xl flex items-center justify-center mr-4">
+                  <Users className="w-6 h-6 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Occupied</p>
+                  <p className="text-2xl font-bold text-blue-600">{stats.occupied}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow duration-200">
+              <div className="flex items-center">
+                <div className="w-12 h-12 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-xl flex items-center justify-center mr-4">
+                  <Star className="w-6 h-6 text-yellow-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Reserved</p>
+                  <p className="text-2xl font-bold text-yellow-600">{stats.reserved}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow duration-200">
+              <div className="flex items-center">
+                <div className="w-12 h-12 bg-gradient-to-br from-red-100 to-red-200 rounded-xl flex items-center justify-center mr-4">
+                  <DollarSign className="w-6 h-6 text-red-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Avg. Price</p>
+                  <p className="text-2xl font-bold text-red-600">
+                    ${Math.round(stats.totalRevenue / stats.total)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Enhanced Error Display */}
+        {error && (
+          <div className="mb-8 animate-slide-in-up">
+            <div className="bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-2xl p-6 shadow-sm">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                    <X className="w-5 h-5 text-red-600" />
                   </div>
-                )}
-              </div>
-
-              <div className="flex space-x-2">
+                </div>
+                <div className="ml-4 flex-1">
+                  <h3 className="text-lg font-semibold text-red-800">Error</h3>
+                  <p className="text-red-700 mt-1">{error}</p>
+                </div>
                 <button
-                  onClick={() => {
-                    setEditingRoom(room);
-                    setShowForm(true);
-                  }}
-                  className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  onClick={() => setError(null)}
+                  className="ml-4 p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
                 >
-                  Edit
-                </button>
-                <button
-                  onClick={() => handleDeleteRoom(room.id)}
-                  className="px-3 py-2 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
-                >
-                  Delete
+                  <X className="w-5 h-5" />
                 </button>
               </div>
             </div>
           </div>
-        ))}
-      </div>
+        )}
 
-      {filteredRooms.length === 0 && !isLoading && (
-        <div className="text-center py-12">
-          <p className="text-gray-500 text-lg">No rooms found matching your criteria.</p>
+        {/* Enhanced Filters Section */}
+        <div className="mb-8 animate-slide-in-up">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            {/* Mobile Filter Toggle */}
+            <div className="lg:hidden p-4 border-b border-gray-100">
+              <button
+                onClick={() => setShowMobileFilters(!showMobileFilters)}
+                className="flex items-center justify-between w-full px-4 py-3 bg-gray-50 rounded-xl text-gray-700 hover:bg-gray-100 transition-colors"
+              >
+                <span className="flex items-center">
+                  <Filter className="w-4 h-4 mr-2" />
+                  Filters & Search
+                </span>
+                {showMobileFilters ? (
+                  <ChevronUp className="w-4 h-4" />
+                ) : (
+                  <ChevronDown className="w-4 h-4" />
+                )}
+              </button>
+            </div>
+
+            {/* Filters Content */}
+            <div className={`lg:block ${showMobileFilters ? 'block' : 'hidden'}`}>
+              <div className="p-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {/* Search Input */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-semibold text-gray-700 flex items-center">
+                      <Search className="w-4 h-4 mr-2 text-gray-500" />
+                      Search
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="Search rooms..."
+                        value={filters.search}
+                        onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                        className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white"
+                      />
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    </div>
+                  </div>
+
+                  {/* Status Filter */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-semibold text-gray-700">Status</label>
+                    <select
+                      value={filters.status}
+                      onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white"
+                    >
+                      <option value="all">All Status</option>
+                      <option value="AVAILABLE">Available</option>
+                      <option value="OCCUPIED">Occupied</option>
+                      <option value="MAINTENANCE">Maintenance</option>
+                      <option value="RESERVED">Reserved</option>
+                    </select>
+                  </div>
+
+                  {/* Type Filter */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-semibold text-gray-700">Type</label>
+                    <select
+                      value={filters.type}
+                      onChange={(e) => setFilters(prev => ({ ...prev, type: e.target.value }))}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white"
+                    >
+                      <option value="all">All Types</option>
+                      <option value="SINGLE">Single</option>
+                      <option value="DOUBLE">Double</option>
+                      <option value="SUITE">Suite</option>
+                      <option value="DELUXE">Deluxe</option>
+                    </select>
+                  </div>
+
+                  {/* Clear Filters */}
+                  <div className="flex items-end">
+                    <button
+                      onClick={() => setFilters({ status: 'all', type: 'all', search: '' })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
+                    >
+                      Clear Filters
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-      )}
 
-      {showForm && (
-        <RoomForm
-          room={editingRoom || undefined}
-          mode={editingRoom ? 'edit' : 'create'}
-          onClose={() => {
-            setShowForm(false);
-            setEditingRoom(null);
-            fetchRooms();
-          }}
-        />
-      )}
+        {/* Enhanced Room Grid */}
+        <div className="animate-slide-in-up">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            {/* Grid Header */}
+            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+              <h3 className="text-lg font-semibold text-gray-900">Room Inventory</h3>
+              <p className="text-sm text-gray-500 mt-1">
+                {filteredRooms.length} room{filteredRooms.length !== 1 ? 's' : ''} found
+              </p>
+            </div>
+
+            {/* Room Grid */}
+            <div className="p-6">
+              {filteredRooms.length === 0 ? (
+                <div className="text-center py-16 px-6">
+                  <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Building className="w-12 h-12 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No rooms found</h3>
+                  <p className="text-gray-500 mb-6">No rooms match your current search criteria.</p>
+                  <button
+                    onClick={() => setFilters({ status: 'all', type: 'all', search: '' })}
+                    className="inline-flex items-center px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                  >
+                    Clear all filters
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {filteredRooms.map((room, index) => (
+                    <div 
+                      key={room.id} 
+                      className="bg-gradient-to-br from-white to-gray-50 border border-gray-200/60 rounded-2xl p-6 shadow-lg shadow-gray-200/50 backdrop-blur-sm hover:shadow-xl hover:scale-105 transition-all duration-200 group"
+                      style={{animationDelay: `${index * 0.05}s`}}
+                    >
+                      {/* Header Section */}
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-200">
+                            <span className="text-white font-bold text-lg">
+                              {room.number}
+                            </span>
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-900 transition-colors">
+                              Room {room.number}
+                            </h3>
+                            <div className="flex items-center space-x-2">
+                              <div className="w-5 h-5 bg-gradient-to-br from-purple-100 to-purple-200 rounded-lg flex items-center justify-center">
+                                {getTypeIcon(room.type)}
+                              </div>
+                              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium shadow-sm ${getTypeColor(room.type)}`}>
+                                {room.type}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium shadow-sm ${getStatusColor(room.status)}`}>
+                          {room.status}
+                        </span>
+                      </div>
+
+                      {/* Room Details */}
+                      <div className="space-y-3 mb-6">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <Users className="h-4 w-4 text-gray-500" />
+                            <span className="text-sm text-gray-600">Capacity:</span>
+                          </div>
+                          <span className="text-sm font-semibold text-gray-900">{room.capacity} guests</span>
+                        </div>
+                        
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <DollarSign className="h-4 w-4 text-gray-500" />
+                            <span className="text-sm text-gray-600">Price:</span>
+                          </div>
+                          <span className="text-lg font-bold text-green-600">${room.price}/night</span>
+                        </div>
+
+                        {room.description && (
+                          <div className="text-sm text-gray-600 mt-3 p-3 bg-gray-50 rounded-xl border border-gray-200/50">
+                            <p className="line-clamp-2">
+                              {room.description.length > 80 
+                                ? `${room.description.substring(0, 80)}...` 
+                                : room.description}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => {
+                            setEditingRoom(room);
+                            setShowForm(true);
+                          }}
+                          className="flex-1 px-4 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm rounded-xl hover:shadow-lg hover:scale-105 transition-all duration-200 flex items-center justify-center font-semibold"
+                        >
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteRoom(room.id)}
+                          className="px-4 py-2.5 bg-gradient-to-r from-red-500 to-red-600 text-white text-sm rounded-xl hover:shadow-lg hover:scale-105 transition-all duration-200 flex items-center justify-center font-semibold"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Room Form Modal */}
+        {showForm && (
+          <RoomForm
+            room={editingRoom || undefined}
+            mode={editingRoom ? 'edit' : 'create'}
+            onClose={() => {
+              setShowForm(false);
+              setEditingRoom(null);
+              fetchRooms();
+            }}
+          />
+        )}
+      </div>
     </div>
   );
 } 

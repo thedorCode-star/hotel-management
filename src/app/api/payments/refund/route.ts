@@ -19,7 +19,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user from JWT token
-    const token = request.cookies.get('auth-token')?.value;
+    const authHeader = request.headers.get('authorization');
+    const cookieToken = request.cookies.get('auth-token')?.value;
+    
+    let token: string | undefined;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    } else if (cookieToken) {
+      token = cookieToken;
+    }
+    
     let userId: string;
 
     if (token) {
@@ -118,12 +127,41 @@ export async function POST(request: NextRequest) {
         }
       });
 
+      // Create Refund record
+      if (refund.status === 'succeeded') {
+        const refundRecord = await db.refund.create({
+          data: {
+            bookingId: (payment as any).bookingId,
+            paymentId: paymentId,
+            amount: refundAmount,
+            refundMethod: 'STRIPE',
+            status: 'COMPLETED',
+            transactionId: refund.id,
+            processedAt: new Date(),
+            notes: `Manual refund via Stripe: ${reason}`
+          }
+        });
+
+        // Update booking refund amount
+        await db.booking.update({
+          where: { id: (payment as any).bookingId },
+          data: {
+            refundAmount: {
+              increment: refundAmount
+            }
+          }
+        });
+
+        console.log(`✅ Refund record created: ${refundRecord.id} for $${refundAmount}`);
+      }
+
       // Update booking status if full refund
       if (refundAmount >= (payment as any).amount && refund.status === 'succeeded') {
         await db.booking.update({
           where: { id: (payment as any).bookingId },
-          data: { status: 'CANCELLED' }
+          data: { status: 'REFUNDED' }
         });
+        console.log(`✅ Booking ${(payment as any).bookingId} marked as REFUNDED (full refund)`);
       }
 
       // Send refund confirmation email

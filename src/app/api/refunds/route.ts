@@ -122,17 +122,19 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Update booking refund amount
-    await db.booking.update({
-      where: { id: bookingId },
-      data: {
-        refundAmount: {
-          increment: amount,
-        },
-      },
-    });
+    // **FIXED: Remove booking.refundAmount update to prevent double-counting**
+    // The Refund model is now the single source of truth for financial reporting
+    // await db.booking.update({
+    //   where: { id: bookingId },
+    //   data: {
+    //     refundAmount: {
+    //       increment: amount,
+    //     },
+    //   },
+    // });
 
-    console.log(`💰 Refund created: $${amount} for booking ${bookingId}`);
+    console.log(`✅ Refund record created: ${refund.id} for $${amount}`);
+    console.log(`ℹ️ Note: booking.refundAmount not updated to prevent double-counting`);
 
     return NextResponse.json({ refund });
   } catch (error) {

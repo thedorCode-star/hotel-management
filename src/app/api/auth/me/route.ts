@@ -13,8 +13,12 @@ interface JwtPayload {
 
 export async function GET(request: NextRequest) {
   try {
-    // Get token from cookies
-    const token = request.cookies.get("auth-token")?.value;
+    // Read token from Authorization header first, then fall back to cookie
+    const authHeader = request.headers.get("authorization");
+    const bearerToken = authHeader?.toLowerCase().startsWith("bearer ")
+      ? authHeader.split(" ")[1]
+      : undefined;
+    const token = bearerToken || request.cookies.get("auth-token")?.value;
 
     if (!token) {
       return NextResponse.json(

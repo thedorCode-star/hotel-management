@@ -2,6 +2,12 @@
 
 import { Elements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
+import { createContext, useContext, ReactNode } from 'react';
+
+// Create a fallback context for when Stripe is not available
+const StripeContext = createContext<{ isStripeAvailable: boolean }>({ isStripeAvailable: false });
+
+export const useStripeContext = () => useContext(StripeContext);
 
 // Load Stripe with publishable key - with proper error handling
 const stripePromise = (() => {
@@ -16,18 +22,24 @@ const stripePromise = (() => {
 })();
 
 interface StripeProviderProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 export default function StripeProvider({ children }: StripeProviderProps) {
-  // If Stripe is not configured, render children without Elements wrapper
+  // If Stripe is not configured, provide fallback context
   if (!stripePromise) {
-    return <>{children}</>;
+    return (
+      <StripeContext.Provider value={{ isStripeAvailable: false }}>
+        {children}
+      </StripeContext.Provider>
+    );
   }
 
   return (
-    <Elements stripe={stripePromise}>
-      {children}
-    </Elements>
+    <StripeContext.Provider value={{ isStripeAvailable: true }}>
+      <Elements stripe={stripePromise}>
+        {children}
+      </Elements>
+    </StripeContext.Provider>
   );
 } 

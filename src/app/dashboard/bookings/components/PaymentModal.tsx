@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useStripe, useElements, CardElement } from '@stripe/react-stripe-js';
 import { X, CreditCard, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import { useStripeContext } from '../../../../components/StripeProvider';
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -33,21 +34,30 @@ const cardElementOptions = {
   },
 };
 
-export default function PaymentModal({ isOpen, onClose, booking, onPaymentSuccess }: PaymentModalProps) {
+// Separate component for Stripe payment form
+function StripePaymentForm({ booking, onPaymentSuccess, onClose }: {
+  booking: PaymentModalProps['booking'];
+  onPaymentSuccess: () => void;
+  onClose: () => void;
+}) {
   const stripe = useStripe();
   const elements = useElements();
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  // Check if Stripe is properly configured
-  const isStripeConfigured = stripe && elements;
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!isStripeConfigured) {
+    if (!stripe || !elements) {
       setError('Payment system is not configured. Please contact support.');
+      return;
+    }
+
+    // Get authentication token
+    const token = localStorage.getItem('token') || getCookie('auth-token');
+    if (!token) {
+      setError('Authentication required. Please log in again.');
       return;
     }
 
@@ -76,6 +86,7 @@ export default function PaymentModal({ isOpen, onClose, booking, onPaymentSucces
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           bookingId: booking.id,
@@ -111,129 +122,152 @@ export default function PaymentModal({ isOpen, onClose, booking, onPaymentSucces
           }, 2000);
         }
       } else {
-        setError(data.error || 'Payment processing failed');
+        if (response.status === 401) {
+          setError('Authentication expired. Please log in again.');
+        } else {
+          setError(data.error || 'Payment processing failed');
+        }
       }
     } catch (error) {
-      setError('Network error. Please try again.');
+      console.error('Payment error:', error);
+      setError('An unexpected error occurred. Please try again.');
     } finally {
       setIsProcessing(false);
     }
   };
 
-  if (!isOpen) return null;
+  // Helper function to get cookie value
+  const getCookie = (name: string): string | null => {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop()?.split(';').shift() || null;
+    return null;
+  };
+
+  if (success) {
+    return (
+      <div className="text-center py-6">
+        <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
+        <p className="text-gray-600 mb-4">Payment successful! Redirecting...</p>
+      </div>
+    );
+  }
 
   return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="bg-gray-50 p-4 rounded-lg">
+        <h4 className="font-medium text-gray-900 mb-2">Booking Details</h4>
+        <div className="text-sm text-gray-600 space-y-1">
+          <p><span className="font-medium">Room:</span> {booking.room.number} ({booking.room.type})</p>
+          <p><span className="font-medium">Check-in:</span> {new Date(booking.checkIn).toLocaleDateString()}</p>
+          <p><span className="font-medium">Check-out:</span> {new Date(booking.checkOut).toLocaleDateString()}</p>
+          <p><span className="font-medium">Total:</span> ${booking.totalPrice}</p>
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Card Information
+        </label>
+        <div className="border border-gray-300 rounded-md p-3">
+          <CardElement options={cardElementOptions} />
+        </div>
+      </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-md p-3">
+          <div className="flex items-center">
+            <AlertCircle className="h-4 w-4 text-red-500 mr-2" />
+            <p className="text-red-600 text-sm">{error}</p>
+          </div>
+        </div>
+      )}
+
+      <div className="flex space-x-3">
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={isProcessing}
+          className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+        >
+          {isProcessing ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              Processing...
+            </>
+          ) : (
+            <>
+              <CreditCard className="h-4 w-4 mr-2" />
+              Pay ${booking.totalPrice}
+            </>
+          )}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+export default function PaymentModal({ isOpen, onClose, booking, onPaymentSuccess }: PaymentModalProps) {
+  const { isStripeAvailable } = useStripeContext();
+
+  if (!isOpen) return null;
+
+  // If Stripe is not available, show a fallback message
+  if (!isStripeAvailable) {
+    return (
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+        <div className="bg-gradient-to-br from-white to-gray-50 rounded-3xl p-6 w-full max-w-md mx-auto shadow-2xl border border-gray-200/50">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Payment System Unavailable</h3>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <X className="h-6 w-6" />
+            </button>
+          </div>
+          <div className="text-center py-6">
+            <AlertCircle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+            <p className="text-gray-600 mb-4">
+              Stripe payment system is not configured. Please contact support or try again later.
+            </p>
+            <button
+              onClick={onClose}
+              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // If Stripe is available, render the payment form with Option 1 styling
+  return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-gradient-to-br from-white to-gray-50 rounded-3xl p-6 w-full max-w-md mx-auto max-h-[90vh] flex flex-col shadow-2xl border border-gray-200/50 overflow-hidden">
-        <div className="flex justify-between items-center mb-6 flex-shrink-0">
-          <h2 className="text-xl font-bold text-gray-900">Complete Payment</h2>
+      <div className="bg-gradient-to-br from-white to-gray-50 rounded-3xl p-6 w-full max-w-md mx-auto shadow-2xl border border-gray-200/50">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900">Complete Payment</h3>
           <button
             onClick={onClose}
-            className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors"
-            aria-label="Close"
+            className="text-gray-400 hover:text-gray-600"
           >
-            <X className="h-5 w-5 text-gray-500" />
+            <X className="h-6 w-6" />
           </button>
         </div>
-
-        {!isStripeConfigured && (
-          <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
-            <div className="flex items-center">
-              <AlertCircle className="h-5 w-5 text-yellow-400 mr-2" />
-              <div>
-                <p className="text-sm font-medium text-yellow-800">
-                  Payment System Not Configured
-                </p>
-                <p className="text-sm text-yellow-700 mt-1">
-                  Stripe payment gateway is not configured. Please contact the administrator.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div className="flex-1">
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-4 mb-6 border border-blue-200/50">
-            <h3 className="font-semibold text-blue-900 mb-2">Booking Details</h3>
-            <div className="space-y-1 text-sm text-blue-800">
-              <p><span className="font-medium">Room:</span> {booking.room.number} ({booking.room.type})</p>
-              <p><span className="font-medium">Guest:</span> {booking.user.name}</p>
-              <p><span className="font-medium">Dates:</span> {new Date(booking.checkIn).toLocaleDateString()} - {new Date(booking.checkOut).toLocaleDateString()}</p>
-              <p><span className="font-medium">Total:</span> ${booking.totalPrice.toFixed(2)}</p>
-            </div>
-          </div>
-
-          {isStripeConfigured ? (
-            <form onSubmit={handleSubmit}>
-              <div className="mb-4">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Card Information
-                </label>
-                <div className="border border-gray-300 rounded-xl p-3 bg-white shadow-sm">
-                  <CardElement options={cardElementOptions} />
-                </div>
-              </div>
-
-              {error && (
-                <div className="mb-4 p-4 bg-gradient-to-r from-red-50 to-pink-50 border border-red-200/50 rounded-2xl">
-                  <div className="flex items-center">
-                    <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
-                    <p className="text-sm text-red-700 font-medium break-words whitespace-normal leading-relaxed">{error}</p>
-                  </div>
-                </div>
-              )}
-
-              {success && (
-                <div className="mb-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200/50 rounded-2xl">
-                  <div className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-                    <p className="text-sm text-green-700 font-medium">Payment successful!</p>
-                  </div>
-                </div>
-              )}
-
-              <div className="flex space-x-4 pt-6 flex-shrink-0">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="flex-1 px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 font-semibold hover:bg-gray-50 transition-all duration-200"
-                  disabled={isProcessing}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isProcessing || !isStripeConfigured}
-                  className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center"
-                >
-                  {isProcessing ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <CreditCard className="h-4 w-4 mr-2" />
-                      Pay ${booking.totalPrice.toFixed(2)}
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          ) : (
-            <div className="text-center">
-              <p className="text-gray-600 mb-4">
-                Payment processing is currently unavailable.
-              </p>
-              <button
-                onClick={onClose}
-                className="px-6 py-3 bg-gray-600 text-white rounded-xl hover:bg-gray-700"
-              >
-                Close
-              </button>
-            </div>
-          )}
-        </div>
+        
+        <StripePaymentForm 
+          booking={booking} 
+          onPaymentSuccess={onPaymentSuccess} 
+          onClose={onClose} 
+        />
       </div>
     </div>
   );

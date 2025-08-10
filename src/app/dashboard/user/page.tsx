@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { User, LogIn, AlertCircle, Info } from 'lucide-react';
 import PaymentForm from '../payments/components/PaymentForm';
 import ReviewForm from '../reviews/components/ReviewForm';
 
@@ -9,6 +10,7 @@ interface User {
   id: string;
   name: string;
   email: string;
+  role: string;
 }
 
 interface Room {
@@ -55,6 +57,7 @@ export default function UserDashboard() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
@@ -73,33 +76,60 @@ export default function UserDashboard() {
       if (userResponse.ok) {
         const userData = await userResponse.json();
         setUser(userData.user);
+        setIsAuthenticated(true);
+        
+        // Only fetch other data if user is authenticated
+        await Promise.all([
+          fetchUserBookings(),
+          fetchUserPayments(),
+          fetchUserReviews()
+        ]);
+      } else {
+        setIsAuthenticated(false);
+        setError('Authentication required');
       }
+    } catch (error) {
+      setIsAuthenticated(false);
+      setError('Failed to load user data');
+      console.error('Error fetching user data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-      // Fetch user bookings
+  const fetchUserBookings = async () => {
+    try {
       const bookingsResponse = await fetch('/api/bookings?userId=current');
       if (bookingsResponse.ok) {
         const bookingsData = await bookingsResponse.json();
         setBookings(bookingsData.bookings || []);
       }
+    } catch (error) {
+      console.error('Error fetching bookings:', error);
+    }
+  };
 
-      // Fetch user payments
+  const fetchUserPayments = async () => {
+    try {
       const paymentsResponse = await fetch('/api/payments?userId=current');
       if (paymentsResponse.ok) {
         const paymentsData = await paymentsResponse.json();
         setPayments(paymentsData.payments || []);
       }
+    } catch (error) {
+      console.error('Error fetching payments:', error);
+    }
+  };
 
-      // Fetch user reviews
+  const fetchUserReviews = async () => {
+    try {
       const reviewsResponse = await fetch('/api/reviews?userId=current');
       if (reviewsResponse.ok) {
         const reviewsData = await reviewsResponse.json();
         setReviews(reviewsData.reviews || []);
       }
     } catch (error) {
-      setError('Failed to load user data');
-      console.error('Error fetching user data:', error);
-    } finally {
-      setIsLoading(false);
+      console.error('Error fetching reviews:', error);
     }
   };
 
@@ -112,7 +142,7 @@ export default function UserDashboard() {
   const handleReviewSuccess = () => {
     setShowReviewForm(false);
     setSelectedRoom(null);
-    fetchUserData();
+    fetchUserReviews();
   };
 
   const getStatusColor = (status: string) => {
@@ -123,8 +153,12 @@ export default function UserDashboard() {
         return 'bg-yellow-100 text-yellow-800';
       case 'CANCELLED':
         return 'bg-red-100 text-red-800';
-      case 'COMPLETED':
+      case 'CHECKED_IN':
         return 'bg-blue-100 text-blue-800';
+      case 'CHECKED_OUT':
+        return 'bg-gray-100 text-gray-800';
+      case 'REFUNDED':
+        return 'bg-purple-100 text-purple-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -132,14 +166,14 @@ export default function UserDashboard() {
 
   const getPaymentStatusColor = (status: string) => {
     switch (status) {
-      case 'completed':
+      case 'COMPLETED':
         return 'bg-green-100 text-green-800';
-      case 'pending':
+      case 'PENDING':
         return 'bg-yellow-100 text-yellow-800';
-      case 'failed':
+      case 'FAILED':
         return 'bg-red-100 text-red-800';
-      case 'refunded':
-        return 'bg-gray-100 text-gray-800';
+      case 'REFUNDED':
+        return 'bg-purple-100 text-purple-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -149,7 +183,7 @@ export default function UserDashboard() {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric',
+      day: 'numeric'
     });
   };
 
@@ -157,13 +191,77 @@ export default function UserDashboard() {
     const start = new Date(checkIn);
     const end = new Date(checkOut);
     const diffTime = Math.abs(end.getTime() - start.getTime());
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
   };
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  // Show authentication required message
+  if (!isAuthenticated) {
+    return (
+      <div className="p-6">
+        <div className="max-w-2xl mx-auto">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
+              <User className="w-8 h-8 text-blue-600" />
+            </div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">My Profile</h1>
+            <p className="text-gray-600">Access your personal dashboard and booking information</p>
+          </div>
+
+          {/* Authentication Required Card */}
+          <div className="bg-white rounded-lg shadow-lg p-8 text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-yellow-100 rounded-full mb-4">
+              <AlertCircle className="w-8 h-8 text-yellow-600" />
+            </div>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Authentication Required</h2>
+            <p className="text-gray-600 mb-6">
+              To view your profile, bookings, and payment history, you need to be logged in.
+            </p>
+            
+            <div className="space-y-3">
+              <button
+                onClick={() => router.push('/login')}
+                className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2"
+              >
+                <LogIn className="w-5 h-5" />
+                <span>Login to Your Account</span>
+              </button>
+              
+              <button
+                onClick={() => router.push('/register')}
+                className="w-full bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+              >
+                Create New Account
+              </button>
+            </div>
+          </div>
+
+          {/* Information Card */}
+          <div className="mt-6 bg-blue-50 rounded-lg p-6">
+            <div className="flex items-start space-x-3">
+              <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-blue-800">
+                <p className="font-medium mb-1">What you'll see after login:</p>
+                <ul className="space-y-1 text-blue-700">
+                  <li>• Your personal information and account details</li>
+                  <li>• Complete booking history and current reservations</li>
+                  <li>• Payment history and transaction records</li>
+                  <li>• Reviews you've written for rooms</li>
+                  <li>• Quick actions for payments and reviews</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -181,32 +279,35 @@ export default function UserDashboard() {
   return (
     <div className="p-6">
       {/* User Welcome */}
-      <div className="bg-white rounded-lg shadow p-6 mb-6">
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg shadow p-6 mb-6">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">
-          Welcome back, {user?.name}!
+          Welcome back, {user?.name}! 👋
         </h1>
         <p className="text-gray-600">{user?.email}</p>
+        <div className="mt-2 text-sm text-blue-600">
+          Role: {user?.role}
+        </div>
       </div>
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Total Bookings</h3>
           <p className="text-3xl font-bold text-blue-600">{bookings.length}</p>
         </div>
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-lg shadow p-6 border-l-4 border-green-500">
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Active Bookings</h3>
           <p className="text-3xl font-bold text-green-600">
             {bookings.filter(b => b.status === 'CONFIRMED').length}
           </p>
         </div>
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-lg shadow p-6 border-l-4 border-purple-500">
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Total Spent</h3>
           <p className="text-3xl font-bold text-purple-600">
             ${bookings.reduce((sum, b) => sum + b.totalPrice, 0).toFixed(2)}
           </p>
         </div>
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-lg shadow p-6 border-l-4 border-orange-500">
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Reviews Written</h3>
           <p className="text-3xl font-bold text-orange-600">{reviews.length}</p>
         </div>

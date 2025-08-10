@@ -18,6 +18,7 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
+    "db:migrate-refunds": "node scripts/migrate-existing-refunds.js",
     "postinstall": "prisma generate"
   },
   "dependencies": {

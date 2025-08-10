@@ -4,6 +4,13 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import BookingForm from '../dashboard/bookings/components/BookingForm';
 
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
 interface Room {
   id: string;
   number: string;
@@ -18,6 +25,7 @@ interface Room {
 
 export default function RoomsPage() {
   const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [filteredRooms, setFilteredRooms] = useState<Room[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -35,6 +43,34 @@ export default function RoomsPage() {
 
   useEffect(() => {
     fetchRooms();
+  }, []);
+
+  // Check auth for hiding the "Sign In" button when logged in
+  useEffect(() => {
+    const checkAuthStatus = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const headers: Record<string, string> = {};
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        const res = await fetch('/api/auth/me', { headers });
+        if (res.ok) {
+          const data = await res.json();
+          setUser(data.user);
+          // Keep route consistency: logged-in users should use dashboard namespace
+          router.replace('/dashboard/rooms');
+        } else {
+          localStorage.removeItem('token');
+          setUser(null);
+        }
+      } catch (err) {
+        localStorage.removeItem('token');
+        setUser(null);
+      }
+    };
+    checkAuthStatus();
+    const handler = () => checkAuthStatus();
+    window.addEventListener('auth-changed', handler as EventListener);
+    return () => window.removeEventListener('auth-changed', handler as EventListener);
   }, []);
 
   useEffect(() => {
@@ -148,12 +184,7 @@ export default function RoomsPage() {
               <h1 className="text-3xl font-bold text-gray-900">Available Rooms</h1>
               <p className="text-gray-600">Find your perfect stay with us</p>
             </div>
-            <button
-              onClick={() => router.push('/auth/login')}
-              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
-            >
-              Sign In
-            </button>
+            {/* No extra Sign In button here to avoid duplication with global navigation */}
           </div>
         </div>
       </div>
