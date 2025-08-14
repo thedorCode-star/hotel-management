@@ -10,6 +10,14 @@ export async function POST(
     const { id } = await params;
     const body = await request.json();
     const { refundMethod, notes } = body;
+    
+    // Debug: Log what we received
+    console.log('🔍 DEBUG: Processing refund request:', {
+      refundId: id,
+      refundMethod,
+      notes,
+      body
+    });
 
     // Get the refund
     const refund = await db.refund.findUnique({
@@ -37,6 +45,16 @@ export async function POST(
       );
     }
 
+    // Validate refund method
+    const validRefundMethods = ['STRIPE', 'CASH', 'BANK_TRANSFER', 'CREDIT_TO_ACCOUNT'];
+    if (!refundMethod || !validRefundMethods.includes(refundMethod)) {
+      console.log('❌ Invalid refund method received:', refundMethod);
+      return NextResponse.json(
+        { error: `Invalid refund method: ${refundMethod}. Must be one of: ${validRefundMethods.join(', ')}` },
+        { status: 400 }
+      );
+    }
+    
     // **PROCESS REFUND BASED ON METHOD**
     let processedTransactionId = (refund as any).transactionId;
     let processingNotes = notes || 'Refund processed';

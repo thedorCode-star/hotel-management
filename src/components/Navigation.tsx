@@ -35,10 +35,7 @@ export default function Navigation() {
 
   const checkAuthStatus = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const headers: Record<string, string> = {};
-      if (token) headers['Authorization'] = `Bearer ${token}`;
-      const response = await fetch('/api/auth/me', { headers });
+      const response = await fetch('/api/auth/me');
 
       if (response.ok) {
         const data = await response.json();
@@ -70,21 +67,15 @@ export default function Navigation() {
 
   const handleLogout = async () => {
     try {
-      const token = localStorage.getItem('token');
-      if (token) {
-        await fetch('/api/auth/logout', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-      }
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+      });
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
-      localStorage.removeItem('token');
+      localStorage.removeItem('token'); // Clear any old tokens
       setUser(null);
-      router.push('/');
+      router.push('/auth/login');
       window.dispatchEvent(new Event('auth-changed'));
     }
   };

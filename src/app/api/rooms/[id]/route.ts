@@ -57,6 +57,35 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Check authentication
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    // Get user info from request headers (set by middleware)
+    const userId = request.headers.get('x-user-id');
+    const userRole = request.headers.get('x-user-role');
+    
+    if (!userId || !userRole) {
+      return NextResponse.json(
+        { error: 'User information not found' },
+        { status: 401 }
+      );
+    }
+
+    // Check if user has permission to edit rooms
+    const allowedRoles = ['ADMIN', 'MANAGER', 'STAFF'];
+    if (!allowedRoles.includes(userRole)) {
+      return NextResponse.json(
+        { error: 'Insufficient permissions. Only ADMIN, MANAGER, and STAFF can edit rooms.' },
+        { status: 403 }
+      );
+    }
+
     const db = getBuildSafeDatabase();
     const { id } = await params;
     const body = await request.json();
@@ -168,6 +197,35 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Check authentication
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    // Get user info from request headers (set by middleware)
+    const userId = request.headers.get('x-user-id');
+    const userRole = request.headers.get('x-user-role');
+    
+    if (!userId || !userRole) {
+      return NextResponse.json(
+        { error: 'User information not found' },
+        { status: 401 }
+      );
+    }
+
+    // Check if user has permission to delete rooms (only ADMIN and MANAGER)
+    const allowedRoles = ['ADMIN', 'MANAGER'];
+    if (!allowedRoles.includes(userRole)) {
+      return NextResponse.json(
+        { error: 'Insufficient permissions. Only ADMIN and MANAGER can delete rooms.' },
+        { status: 403 }
+      );
+    }
+
     const db = getBuildSafeDatabase();
     const { id } = await params;
 

@@ -74,6 +74,7 @@ export default function BookingsPage() {
 
   useEffect(() => {
     fetchBookings();
+    fetchRefunds(); // Also fetch refunds for financial summary
   }, []);
 
   useEffect(() => {
@@ -94,6 +95,24 @@ export default function BookingsPage() {
       console.error('Error fetching bookings:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchRefunds = async () => {
+    try {
+      setIsRefundsLoading(true);
+      const response = await fetch('/api/refunds');
+      if (response.ok) {
+        const data = await response.json();
+        const totalRefundAmount = data.refunds?.reduce((sum: number, refund: any) => sum + refund.amount, 0) || 0;
+        setTotalRefunds(totalRefundAmount);
+      } else {
+        console.error('Failed to fetch refunds for financial summary');
+      }
+    } catch (error) {
+      console.error('Error fetching refunds:', error);
+    } finally {
+      setIsRefundsLoading(false);
     }
   };
 
@@ -262,9 +281,9 @@ export default function BookingsPage() {
   const confirmedBookingsValue = bookings.filter(b => b.status === 'PAID').reduce((sum, booking) => sum + booking.totalPrice, 0);
   const pendingBookingsValue = bookings.filter(b => b.status === 'PENDING').reduce((sum, booking) => sum + booking.totalPrice, 0);
 
-  // Note: For accurate refund calculations, we should fetch from Refund model
-  // This is a simplified calculation for display purposes
-  const totalRefunds = 0; // Will be populated from Refund model in future updates
+  // Fetch real refund data for accurate financial calculations
+  const [totalRefunds, setTotalRefunds] = useState(0);
+  const [isRefundsLoading, setIsRefundsLoading] = useState(true);
 
   if (isLoading) {
     return (
@@ -535,10 +554,14 @@ export default function BookingsPage() {
                 <div>
                   <p className="text-sm font-medium text-red-800">Refund Impact</p>
                   <p className="text-2xl font-bold text-red-900">
-                    -{formatCurrency(totalRefunds)}
+                    {isRefundsLoading ? (
+                      <span className="text-lg">Loading...</span>
+                    ) : (
+                      `-${formatCurrency(totalRefunds)}`
+                    )}
                   </p>
                   <p className="text-xs text-red-600 mt-1">
-                    From Refund model
+                    {isRefundsLoading ? 'Fetching data...' : 'From Refund model'}
                   </p>
                 </div>
                 <div className="bg-red-100 rounded-full p-2">

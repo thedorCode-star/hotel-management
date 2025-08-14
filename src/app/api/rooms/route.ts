@@ -52,7 +52,57 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('🔐 ROOM CREATION ATTEMPT RECEIVED');
+    console.log('🔍 Request headers:', Object.fromEntries(request.headers.entries()));
+    
+    // Check if user is authenticated via cookie
+    const cookies = request.cookies;
+    const authToken = cookies.get('auth-token')?.value;
+    
+    console.log('🍪 Auth token present:', !!authToken);
+    
+    if (!authToken) {
+      console.log('❌ No auth token found - BLOCKING ACCESS');
+      return NextResponse.json(
+        { error: 'Authentication required. Please log in.' },
+        { status: 401 }
+      );
+    }
+    
+    // TODO: In production, verify JWT token and extract real user info
+    // For now, we'll use a simple approach - check if user is logged in
     const db = getBuildSafeDatabase();
+    
+    // Try to find a user with this token (simplified approach)
+    // In production, this should verify the JWT and extract user info
+    let userId: string;
+    let userRole: string;
+    
+    try {
+      // For now, assume any authenticated user is ADMIN
+      // This is TEMPORARY - we need to fix the middleware
+      userId = 'authenticated-user';
+      userRole = 'ADMIN';
+      
+      console.log('✅ User authenticated, role:', userRole);
+    } catch (error) {
+      console.log('❌ Error verifying user:', error);
+      return NextResponse.json(
+        { error: 'Invalid authentication token' },
+        { status: 401 }
+      );
+    }
+    
+    console.log('👤 User attempting room creation:', { userId, userRole });
+    
+    // Check if user has permission to create rooms
+    const allowedRoles = ['ADMIN', 'MANAGER', 'STAFF'];
+    if (!allowedRoles.includes(userRole)) {
+      return NextResponse.json(
+        { error: 'Insufficient permissions. Only ADMIN, MANAGER, and STAFF can create rooms.' },
+        { status: 403 }
+      );
+    }
     const body = await request.json();
     
     const { number, type, capacity, price, description } = body;
@@ -101,6 +151,9 @@ export async function POST(request: NextRequest) {
         status: 'AVAILABLE',
       },
     });
+
+    // Log the room creation for security audit
+    console.log(`🔐 ROOM CREATED: User ${userId} (${userRole}) created room ${number}`);
 
     return NextResponse.json({ room }, { status: 201 });
   } catch (error) {

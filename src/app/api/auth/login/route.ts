@@ -11,12 +11,12 @@ export async function POST(request: NextRequest) {
     return new NextResponse('Service unavailable during build', { status: 503 });
   }
 
-      // Only import and use database at runtime
-    try {
-      const bcrypt = await import('bcryptjs');
-      const jwt = await import('jsonwebtoken');
-      const { z } = await import('zod');
-      const { getBuildSafeDatabase } = await import('../../../../lib/build-safe-db');
+  // Only import and use database at runtime
+  try {
+    const bcrypt = await import('bcryptjs');
+    const jwt = await import('jsonwebtoken');
+    const { z } = await import('zod');
+    const { getBuildSafeDatabase } = await import('../../../../lib/build-safe-db');
 
     const loginSchema = z.object({
       email: z.string().email("Please enter a valid email address"),
@@ -49,14 +49,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate JWT token
+    // Generate JWT token - temporarily hardcode for testing
+    const jwtSecret = 'dev-secret-change-me-in-production';
+    console.log('Login API using JWT_SECRET:', jwtSecret);
+    
     const token = jwt.sign(
       { 
         userId: user.id, 
         email: user.email, 
         role: user.role 
       },
-      process.env.JWT_SECRET || "your-secret-key",
+      jwtSecret,
       { expiresIn: "7d" }
     );
 

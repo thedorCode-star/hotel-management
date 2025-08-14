@@ -138,6 +138,13 @@ export default function BookingActions({ booking, onAction, onPaymentRequest }: 
 
       const refundMethod = prompt('Enter refund method (STRIPE/CASH/BANK_TRANSFER/CREDIT_TO_ACCOUNT):', 'CASH');
       if (!refundMethod) return;
+      
+      // Validate refund method
+      const validMethods = ['STRIPE', 'CASH', 'BANK_TRANSFER', 'CREDIT_TO_ACCOUNT'];
+      if (!validMethods.includes(refundMethod.toUpperCase())) {
+        alert(`Invalid refund method. Please use one of: ${validMethods.join(', ')}`);
+        return;
+      }
 
       const notes = prompt('Enter refund notes (optional):', '');
 

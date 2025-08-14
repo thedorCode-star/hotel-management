@@ -142,6 +142,15 @@ export default function RefundsPage() {
 
     try {
       setProcessingRefund(true);
+      
+      // Debug: Log what we're sending
+      console.log('🔍 DEBUG: Processing refund with:', {
+        refundId: selectedRefund.id,
+        refundMethod,
+        notes: refundNotes || `Refund processed via ${refundMethod}`,
+        selectedRefund
+      });
+      
       const response = await fetch(`/api/refunds/${selectedRefund.id}/process`, {
         method: 'POST',
         headers: {

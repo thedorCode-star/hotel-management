@@ -1,47 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getBuildSafeDatabase } from '../../../../lib/build-safe-db';
-import * as jwt from 'jsonwebtoken';
 
 export async function GET(request: NextRequest) {
   try {
     const db = getBuildSafeDatabase();
     
-    // Get user from JWT token
-    const authHeader = request.headers.get('authorization');
-    const cookieToken = request.cookies.get('auth-token')?.value;
+    // Get user from headers (set by middleware)
+    const userId = request.headers.get('x-user-id');
+    const userRole = request.headers.get('x-user-role');
     
-    let token: string | undefined;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      token = authHeader.substring(7); // Remove 'Bearer ' prefix
-    } else if (cookieToken) {
-      token = cookieToken;
-    }
-    
-    let userId: string;
-
-    if (token) {
-      try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any;
-        userId = decoded.userId;
-      } catch (error) {
-        return NextResponse.json(
-          { error: 'Invalid authentication token' },
-          { status: 401 }
-        );
-      }
-    } else {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
-
-    // Check if user is admin
-    const user = await db.user.findUnique({
-      where: { id: userId }
-    });
-
-    if ((user as any)?.role !== 'ADMIN') {
+    // Check if user is authenticated and is admin
+    if (!userId || userRole !== 'ADMIN') {
       return NextResponse.json(
         { error: 'Admin access required' },
         { status: 403 }
@@ -54,7 +23,6 @@ export async function GET(request: NextRequest) {
     const startOfWeek = new Date(today);
     startOfWeek.setDate(today.getDate() - today.getDay());
     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-    const startOfYear = new Date(today.getFullYear(), 0, 1);
 
     // **Payment Trends Analysis**
     

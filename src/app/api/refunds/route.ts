@@ -78,6 +78,15 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+    
+    // Validate refund method
+    const validRefundMethods = ['STRIPE', 'CASH', 'BANK_TRANSFER', 'CREDIT_TO_ACCOUNT'];
+    if (!refundMethod || !validRefundMethods.includes(refundMethod)) {
+      return NextResponse.json(
+        { error: `Invalid refund method. Must be one of: ${validRefundMethods.join(', ')}` },
+        { status: 400 }
+      );
+    }
 
     // Check if refund amount doesn't exceed paid amount
     const totalPaid = (booking as any).paidAmount || 0;

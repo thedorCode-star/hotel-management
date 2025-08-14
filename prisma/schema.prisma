@@ -24,14 +24,39 @@ model User {
   password  String
   name      String
   role      UserRole @default(GUEST)
+  isActive  Boolean  @default(true)
+  lastLogin DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
-  bookings Booking[]
-  reviews  Review[]
+  profile   UserProfile?
+  bookings  Booking[]
+  reviews   Review[]
 
   @@map("users")
+}
+
+// NEW: Extended user profile information
+model UserProfile {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  phone       String?
+  address     String?
+  city        String?
+  country     String?
+  postalCode  String?
+  dateOfBirth DateTime?
+  emergencyContact String?
+  preferences Json?    // Store user preferences as JSON
+  avatar      String?  // URL to profile picture
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_profiles")
 }
 
 model Room {
@@ -73,20 +98,26 @@ model Booking {
   room            Room          @relation(fields: [roomId], references: [id], onDelete: Cascade)
   payments        Payment[]
   refunds         Refund[]      // **NEW: Relation to refunds**
+  reviews         Review[]      // **NEW: Relation to reviews**
 }
 
 model Review {
-  id        String   @id @default(cuid())
-  userId    String
-  roomId    String
-  rating    Int      @db.SmallInt
-  comment   String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String   @id @default(cuid())
+  userId        String
+  roomId        String
+  bookingId     String?  // Optional: link to specific booking
+  rating        Int      @db.SmallInt
+  comment       String
+  isVerified    Boolean  @default(false)  // Staff/Admin verified review
+  isPublic      Boolean  @default(true)   // Whether review is visible to public
+  helpfulCount  Int      @default(0)      // Number of helpful votes
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  room    Room    @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  booking Booking? @relation(fields: [bookingId], references: [id])
 
   @@map("reviews")
 }
@@ -126,7 +157,9 @@ model Refund {
 
 enum UserRole {
   ADMIN
+  MANAGER
   STAFF
+  CONCIERGE
   GUEST
 }
 

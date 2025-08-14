@@ -28,7 +28,7 @@ export interface BuildSafeDatabase {
     count: (args: unknown) => Promise<unknown>;
     aggregate: (args: unknown) => Promise<unknown>;
   };
-  reviews: {
+  review: {
     findUnique: (args: unknown) => Promise<unknown>;
     create: (args: unknown) => Promise<unknown>;
     findMany: (args: unknown) => Promise<unknown>;
@@ -132,7 +132,7 @@ const buildSafeMock: BuildSafeDatabase = {
     count: async () => 0,
     aggregate: async () => ({ _sum: { totalPrice: 0 }, _avg: { totalPrice: 0 } }),
   },
-  reviews: {
+  review: {
     findUnique: async () => ({
       id: 'review-safe-id',
       roomId: 'room-safe-id',
@@ -213,7 +213,13 @@ export function getBuildSafeDatabase(): BuildSafeDatabase {
         log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
       }) as BuildSafeDatabase;
     } catch (error) {
-      console.warn('Failed to initialize Prisma, using mock:', error);
+      console.error('Failed to initialize Prisma:', error);
+      // Don't fall back to mock in production or when we have a DATABASE_URL
+      if (process.env.NODE_ENV === 'production' || process.env.DATABASE_URL) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        throw new Error(`Database connection failed: ${errorMessage}`);
+      }
+      console.warn('Using mock database for development');
       return buildSafeMock;
     }
   }

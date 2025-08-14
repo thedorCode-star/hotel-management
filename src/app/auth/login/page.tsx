@@ -39,6 +39,9 @@ export default function LoginPage() {
 
     setIsLoading(true);
 
+    // Clear any old tokens that might have invalid signatures
+    localStorage.clear();
+
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
@@ -50,7 +53,7 @@ export default function LoginPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Login failed');
+        throw new Error(errorData.message || 'Login failed');
       }
 
       const data = await response.json();

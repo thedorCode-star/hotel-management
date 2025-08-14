@@ -1,12 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getBuildSafeDatabase } from '../../../../lib/build-safe-db';
-import * as jwt from 'jsonwebtoken';
-
-interface JwtPayload {
-  userId: string;
-  email: string;
-  role: string;
-}
+import { getBuildSafeDatabase } from '@/lib/build-safe-db';
 
 export async function GET(
   request: NextRequest,
@@ -14,14 +7,31 @@ export async function GET(
 ) {
   try {
     const db = getBuildSafeDatabase();
+    
+    // Get user from headers (set by middleware)
+    const userId = request.headers.get('x-user-id');
+    const userRole = request.headers.get('x-user-role');
+
+    // Check if user is authenticated
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    const reviewId = params.id;
+
+    // Fetch the specific review with related data
     const review = await db.review.findUnique({
-      where: { id: params.id },
+      where: { id: reviewId },
       include: {
         user: {
           select: {
             id: true,
             name: true,
             email: true,
+            role: true,
           },
         },
         room: {
@@ -29,6 +39,13 @@ export async function GET(
             id: true,
             number: true,
             type: true,
+          },
+        },
+        booking: {
+          select: {
+            id: true,
+            checkIn: true,
+            checkOut: true,
           },
         },
       },
@@ -41,7 +58,31 @@ export async function GET(
       );
     }
 
-    return NextResponse.json({ review });
+    // Check permissions based on user role
+    if (userRole === 'GUEST') {
+      // Guests can only see public reviews
+      if (!review.isPublic) {
+        return NextResponse.json(
+          { error: 'Access denied' },
+          { status: 403 }
+        );
+      }
+    } else if (userRole === 'STAFF' || userRole === 'CONCIERGE') {
+      // Staff can see public reviews
+      if (!review.isPublic) {
+        return NextResponse.json(
+          { error: 'Access denied' },
+          { status: 403 }
+        );
+      }
+    }
+    // ADMIN and MANAGER can see all reviews
+
+    return NextResponse.json({
+      success: true,
+      review,
+    });
+
   } catch (error) {
     console.error('Error fetching review:', error);
     return NextResponse.json(
@@ -57,29 +98,34 @@ export async function PUT(
 ) {
   try {
     const db = getBuildSafeDatabase();
-    const body = await request.json();
     
-    const { comment, rating } = body;
+    // Get user from headers (set by middleware)
+    const userId = request.headers.get('x-user-id');
+    const userRole = request.headers.get('x-user-role');
 
-    // Get authenticated user from token
-    const token = request.cookies.get("auth-token")?.value;
-    let userId: string | null = null;
-
-    if (token) {
-      try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || "your-secret-key") as JwtPayload;
-        userId = decoded.userId;
-      } catch (error) {
-        console.error('Token verification failed:', error);
-      }
+    // Check if user is authenticated
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
     }
 
-    // Check if review exists
+    // Check if user can manage reviews
+    if (!['ADMIN', 'MANAGER'].includes(userRole || '')) {
+      return NextResponse.json(
+        { error: 'Insufficient permissions to update reviews' },
+        { status: 403 }
+      );
+    }
+
+    const reviewId = params.id;
+    const body = await request.json();
+    const { isPublic, isVerified, comment, rating } = body;
+
+    // Validate the review exists
     const existingReview = await db.review.findUnique({
-      where: { id: params.id },
-      include: {
-        room: true,
-      },
+      where: { id: reviewId },
     }) as any;
 
     if (!existingReview) {
@@ -89,43 +135,36 @@ export async function PUT(
       );
     }
 
-    // Check if user is authorized to update this review
-    if (userId && existingReview.userId !== userId) {
-      return NextResponse.json(
-        { error: 'You can only update your own reviews' },
-        { status: 403 }
-      );
+    // Prepare update data
+    const updateData: any = {};
+    
+    if (typeof isPublic === 'boolean') {
+      updateData.isPublic = isPublic;
+    }
+    
+    if (typeof isVerified === 'boolean') {
+      updateData.isVerified = isVerified;
+    }
+    
+    if (comment && comment.trim().length > 0) {
+      updateData.comment = comment.trim();
+    }
+    
+    if (rating && rating >= 1 && rating <= 5) {
+      updateData.rating = rating;
     }
 
-    // Validate rating if provided
-    if (rating && (rating < 1 || rating > 5)) {
-      return NextResponse.json(
-        { error: 'Rating must be between 1 and 5' },
-        { status: 400 }
-      );
-    }
-
-    // Validate comment if provided
-    if (comment && (comment.length < 10 || comment.length > 1000)) {
-      return NextResponse.json(
-        { error: 'Comment must be between 10 and 1000 characters' },
-        { status: 400 }
-      );
-    }
-
-    // Update review
+    // Update the review
     const updatedReview = await db.review.update({
-      where: { id: params.id },
-      data: {
-        ...(comment && { comment }),
-        ...(rating && { rating }),
-      },
+      where: { id: reviewId },
+      data: updateData,
       include: {
         user: {
           select: {
             id: true,
             name: true,
             email: true,
+            role: true,
           },
         },
         room: {
@@ -135,13 +174,22 @@ export async function PUT(
             type: true,
           },
         },
+        booking: {
+          select: {
+            id: true,
+            checkIn: true,
+            checkOut: true,
+          },
+        },
       },
     }) as any;
 
-    // Update room rating
-    await updateRoomRating(existingReview.roomId);
+    return NextResponse.json({
+      success: true,
+      review: updatedReview,
+      message: 'Review updated successfully',
+    });
 
-    return NextResponse.json({ review: updatedReview });
   } catch (error) {
     console.error('Error updating review:', error);
     return NextResponse.json(
@@ -157,26 +205,32 @@ export async function DELETE(
 ) {
   try {
     const db = getBuildSafeDatabase();
+    
+    // Get user from headers (set by middleware)
+    const userId = request.headers.get('x-user-id');
+    const userRole = request.headers.get('x-user-role');
 
-    // Get authenticated user from token
-    const token = request.cookies.get("auth-token")?.value;
-    let userId: string | null = null;
-
-    if (token) {
-      try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || "your-secret-key") as JwtPayload;
-        userId = decoded.userId;
-      } catch (error) {
-        console.error('Token verification failed:', error);
-      }
+    // Check if user is authenticated
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
     }
 
-    // Check if review exists
+    // Check if user can delete reviews
+    if (!['ADMIN', 'MANAGER'].includes(userRole || '')) {
+      return NextResponse.json(
+        { error: 'Insufficient permissions to delete reviews' },
+        { status: 403 }
+      );
+    }
+
+    const reviewId = params.id;
+
+    // Validate the review exists
     const existingReview = await db.review.findUnique({
-      where: { id: params.id },
-      include: {
-        room: true,
-      },
+      where: { id: reviewId },
     }) as any;
 
     if (!existingReview) {
@@ -186,60 +240,21 @@ export async function DELETE(
       );
     }
 
-    // Check if user is authorized to delete this review
-    if (userId && existingReview.userId !== userId) {
-      return NextResponse.json(
-        { error: 'You can only delete your own reviews' },
-        { status: 403 }
-      );
-    }
-
-    // Delete review
+    // Delete the review
     await db.review.delete({
-      where: { id: params.id },
+      where: { id: reviewId },
     });
 
-    // Update room rating
-    await updateRoomRating(existingReview.roomId);
+    return NextResponse.json({
+      success: true,
+      message: 'Review deleted successfully',
+    });
 
-    return NextResponse.json(
-      { message: 'Review deleted successfully' },
-      { status: 200 }
-    );
   } catch (error) {
     console.error('Error deleting review:', error);
     return NextResponse.json(
       { error: 'Failed to delete review' },
       { status: 500 }
     );
-  }
-}
-
-async function updateRoomRating(roomId: string) {
-  try {
-    const db = getBuildSafeDatabase();
-    
-    // Calculate average rating for all reviews (since we don't have status field)
-    const reviews = await db.review.findMany({
-      where: {
-        roomId,
-      },
-      select: {
-        rating: true,
-      },
-    }) as any[];
-
-    if (reviews.length > 0) {
-      const totalRating = reviews.reduce((sum: number, review: { rating: number }) => sum + review.rating, 0);
-      const averageRating = totalRating / reviews.length;
-
-      // Note: Room model doesn't have averageRating and reviewCount fields
-      // We'll just log the calculation for now
-      console.log(`Room ${roomId} average rating: ${averageRating}, total reviews: ${reviews.length}`);
-    } else {
-      console.log(`Room ${roomId} has no reviews`);
-    }
-  } catch (error) {
-    console.error('Error updating room rating:', error);
   }
 } 

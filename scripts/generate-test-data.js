@@ -82,7 +82,7 @@ async function generateTestData() {
           checkIn: new Date(),
           checkOut: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
           totalPrice: amount,
-          status: 'CONFIRMED',
+          status: 'PAID',
         },
       });
 
@@ -126,7 +126,7 @@ async function generateTestData() {
           checkIn: new Date(),
           checkOut: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
           totalPrice: amount,
-          status: 'CONFIRMED',
+          status: 'PAID',
         },
       });
 
