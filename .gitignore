@@ -123,3 +123,5 @@ coverage/
 # Production builds
 build/
 dist/
+.env*
+*.backup
