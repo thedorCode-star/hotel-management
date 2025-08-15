@@ -3,36 +3,40 @@
 exports[`BookingForm matches snapshot for create mode 1`] = `
 <div>
   <div
-    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+    class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
   >
     <div
-      class="bg-white rounded-lg p-6 w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto"
+      class="bg-gradient-to-br from-white to-gray-50 rounded-3xl p-6 w-full max-w-md mx-auto max-h-[90vh] flex flex-col shadow-2xl border border-gray-200/50 overflow-hidden"
     >
       <div
-        class="flex justify-between items-center mb-4"
+        class="flex justify-between items-center mb-6 flex-shrink-0"
       >
         <h2
-          class="text-xl font-semibold"
+          class="text-xl font-bold text-gray-900"
         >
           Create New Booking
         </h2>
         <button
-          class="text-gray-500 hover:text-gray-700"
+          class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors"
         >
-          ✕
+          <span
+            class="text-gray-500 font-bold"
+          >
+            ×
+          </span>
         </button>
       </div>
       <form
-        class="space-y-4"
+        class="flex-1 space-y-6"
       >
         <div>
           <label
-            class="block text-sm font-medium text-gray-700 mb-1"
+            class="block text-sm font-semibold text-gray-700 mb-2"
           >
             Room *
           </label>
           <select
-            class="w-full px-3 py-2 border rounded-md border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white shadow-sm border-gray-300"
           >
             <option
               value=""
@@ -68,39 +72,39 @@ exports[`BookingForm matches snapshot for create mode 1`] = `
         >
           <div>
             <label
-              class="block text-sm font-medium text-gray-700 mb-1"
+              class="block text-sm font-semibold text-gray-700 mb-2"
             >
               Check-in Date *
             </label>
             <input
-              class="w-full px-3 py-2 border rounded-md border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              min="2025-08-07"
+              class="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white shadow-sm border-gray-300"
+              min="2025-08-15"
               type="date"
-              value="2025-08-07"
+              value="2025-08-15"
             />
           </div>
           <div>
             <label
-              class="block text-sm font-medium text-gray-700 mb-1"
+              class="block text-sm font-semibold text-gray-700 mb-2"
             >
               Check-out Date *
             </label>
             <input
-              class="w-full px-3 py-2 border rounded-md border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              min="2025-08-07"
+              class="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white shadow-sm border-gray-300"
+              min="2025-08-15"
               type="date"
-              value="2025-08-08"
+              value="2025-08-16"
             />
           </div>
         </div>
         <div>
           <label
-            class="block text-sm font-medium text-gray-700 mb-1"
+            class="block text-sm font-semibold text-gray-700 mb-2"
           >
             Number of Guests *
           </label>
           <input
-            class="w-full px-3 py-2 border rounded-md border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white shadow-sm border-gray-300"
             max="10"
             min="1"
             type="number"
@@ -108,16 +112,16 @@ exports[`BookingForm matches snapshot for create mode 1`] = `
           />
         </div>
         <div
-          class="flex space-x-3 pt-4"
+          class="flex space-x-4 pt-6"
         >
           <button
-            class="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="flex-1 px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 font-semibold hover:bg-gray-50 transition-all duration-200"
             type="button"
           >
             Cancel
           </button>
           <button
-            class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            class="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             type="submit"
           >
             Create Booking
@@ -132,36 +136,40 @@ exports[`BookingForm matches snapshot for create mode 1`] = `
 exports[`BookingForm matches snapshot for edit mode 1`] = `
 <div>
   <div
-    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+    class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
   >
     <div
-      class="bg-white rounded-lg p-6 w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto"
+      class="bg-gradient-to-br from-white to-gray-50 rounded-3xl p-6 w-full max-w-md mx-auto max-h-[90vh] flex flex-col shadow-2xl border border-gray-200/50 overflow-hidden"
     >
       <div
-        class="flex justify-between items-center mb-4"
+        class="flex justify-between items-center mb-6 flex-shrink-0"
       >
         <h2
-          class="text-xl font-semibold"
+          class="text-xl font-bold text-gray-900"
         >
           Edit Booking
         </h2>
         <button
-          class="text-gray-500 hover:text-gray-700"
+          class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors"
         >
-          ✕
+          <span
+            class="text-gray-500 font-bold"
+          >
+            ×
+          </span>
         </button>
       </div>
       <form
-        class="space-y-4"
+        class="flex-1 space-y-6"
       >
         <div>
           <label
-            class="block text-sm font-medium text-gray-700 mb-1"
+            class="block text-sm font-semibold text-gray-700 mb-2"
           >
             Room *
           </label>
           <select
-            class="w-full px-3 py-2 border rounded-md border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white shadow-sm border-gray-300"
           >
             <option
               value=""
@@ -197,25 +205,25 @@ exports[`BookingForm matches snapshot for edit mode 1`] = `
         >
           <div>
             <label
-              class="block text-sm font-medium text-gray-700 mb-1"
+              class="block text-sm font-semibold text-gray-700 mb-2"
             >
               Check-in Date *
             </label>
             <input
-              class="w-full px-3 py-2 border rounded-md border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              min="2025-08-07"
+              class="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white shadow-sm border-gray-300"
+              min="2025-08-15"
               type="date"
               value="2024-01-15"
             />
           </div>
           <div>
             <label
-              class="block text-sm font-medium text-gray-700 mb-1"
+              class="block text-sm font-semibold text-gray-700 mb-2"
             >
               Check-out Date *
             </label>
             <input
-              class="w-full px-3 py-2 border rounded-md border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white shadow-sm border-gray-300"
               min="2024-01-15"
               type="date"
               value="2024-01-17"
@@ -224,12 +232,12 @@ exports[`BookingForm matches snapshot for edit mode 1`] = `
         </div>
         <div>
           <label
-            class="block text-sm font-medium text-gray-700 mb-1"
+            class="block text-sm font-semibold text-gray-700 mb-2"
           >
             Number of Guests *
           </label>
           <input
-            class="w-full px-3 py-2 border rounded-md border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white shadow-sm border-gray-300"
             max="10"
             min="1"
             type="number"
@@ -237,10 +245,10 @@ exports[`BookingForm matches snapshot for edit mode 1`] = `
           />
         </div>
         <div
-          class="bg-blue-50 border border-blue-200 rounded-md p-3"
+          class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-4 border border-blue-200/50"
         >
           <p
-            class="text-sm text-blue-800"
+            class="text-sm font-semibold text-blue-800"
           >
             <strong>
               Total Price:
@@ -250,16 +258,16 @@ exports[`BookingForm matches snapshot for edit mode 1`] = `
           </p>
         </div>
         <div
-          class="flex space-x-3 pt-4"
+          class="flex space-x-4 pt-6"
         >
           <button
-            class="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="flex-1 px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 font-semibold hover:bg-gray-50 transition-all duration-200"
             type="button"
           >
             Cancel
           </button>
           <button
-            class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            class="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             type="submit"
           >
             Update Booking
@@ -274,16 +282,16 @@ exports[`BookingForm matches snapshot for edit mode 1`] = `
 exports[`BookingForm matches snapshot with loading state 1`] = `
 <div>
   <div
-    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+    class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50"
   >
     <div
-      class="bg-white rounded-lg p-6"
+      class="bg-gradient-to-br from-white to-gray-50 rounded-3xl p-6 shadow-2xl border border-gray-200/50"
     >
       <div
         class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"
       />
       <p
-        class="text-center mt-2"
+        class="text-center mt-2 text-gray-600"
       >
         Loading rooms...
       </p>
@@ -295,36 +303,40 @@ exports[`BookingForm matches snapshot with loading state 1`] = `
 exports[`BookingForm matches snapshot with room selection 1`] = `
 <div>
   <div
-    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+    class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
   >
     <div
-      class="bg-white rounded-lg p-6 w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto"
+      class="bg-gradient-to-br from-white to-gray-50 rounded-3xl p-6 w-full max-w-md mx-auto max-h-[90vh] flex flex-col shadow-2xl border border-gray-200/50 overflow-hidden"
     >
       <div
-        class="flex justify-between items-center mb-4"
+        class="flex justify-between items-center mb-6 flex-shrink-0"
       >
         <h2
-          class="text-xl font-semibold"
+          class="text-xl font-bold text-gray-900"
         >
           Create New Booking
         </h2>
         <button
-          class="text-gray-500 hover:text-gray-700"
+          class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors"
         >
-          ✕
+          <span
+            class="text-gray-500 font-bold"
+          >
+            ×
+          </span>
         </button>
       </div>
       <form
-        class="space-y-4"
+        class="flex-1 space-y-6"
       >
         <div>
           <label
-            class="block text-sm font-medium text-gray-700 mb-1"
+            class="block text-sm font-semibold text-gray-700 mb-2"
           >
             Room *
           </label>
           <select
-            class="w-full px-3 py-2 border rounded-md border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white shadow-sm border-gray-300"
           >
             <option
               value=""
@@ -360,39 +372,39 @@ exports[`BookingForm matches snapshot with room selection 1`] = `
         >
           <div>
             <label
-              class="block text-sm font-medium text-gray-700 mb-1"
+              class="block text-sm font-semibold text-gray-700 mb-2"
             >
               Check-in Date *
             </label>
             <input
-              class="w-full px-3 py-2 border rounded-md border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              min="2025-08-07"
+              class="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white shadow-sm border-gray-300"
+              min="2025-08-15"
               type="date"
-              value="2025-08-07"
+              value="2025-08-15"
             />
           </div>
           <div>
             <label
-              class="block text-sm font-medium text-gray-700 mb-1"
+              class="block text-sm font-semibold text-gray-700 mb-2"
             >
               Check-out Date *
             </label>
             <input
-              class="w-full px-3 py-2 border rounded-md border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              min="2025-08-07"
+              class="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white shadow-sm border-gray-300"
+              min="2025-08-15"
               type="date"
-              value="2025-08-08"
+              value="2025-08-16"
             />
           </div>
         </div>
         <div>
           <label
-            class="block text-sm font-medium text-gray-700 mb-1"
+            class="block text-sm font-semibold text-gray-700 mb-2"
           >
             Number of Guests *
           </label>
           <input
-            class="w-full px-3 py-2 border rounded-md border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white shadow-sm border-gray-300"
             max="10"
             min="1"
             type="number"
@@ -400,10 +412,10 @@ exports[`BookingForm matches snapshot with room selection 1`] = `
           />
         </div>
         <div
-          class="bg-blue-50 border border-blue-200 rounded-md p-3"
+          class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-4 border border-blue-200/50"
         >
           <p
-            class="text-sm text-blue-800"
+            class="text-sm font-semibold text-blue-800"
           >
             <strong>
               Total Price:
@@ -413,16 +425,16 @@ exports[`BookingForm matches snapshot with room selection 1`] = `
           </p>
         </div>
         <div
-          class="flex space-x-3 pt-4"
+          class="flex space-x-4 pt-6"
         >
           <button
-            class="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="flex-1 px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 font-semibold hover:bg-gray-50 transition-all duration-200"
             type="button"
           >
             Cancel
           </button>
           <button
-            class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            class="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             type="submit"
           >
             Create Booking
@@ -437,36 +449,40 @@ exports[`BookingForm matches snapshot with room selection 1`] = `
 exports[`BookingForm matches snapshot with validation errors 1`] = `
 <div>
   <div
-    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+    class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
   >
     <div
-      class="bg-white rounded-lg p-6 w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto"
+      class="bg-gradient-to-br from-white to-gray-50 rounded-3xl p-6 w-full max-w-md mx-auto max-h-[90vh] flex flex-col shadow-2xl border border-gray-200/50 overflow-hidden"
     >
       <div
-        class="flex justify-between items-center mb-4"
+        class="flex justify-between items-center mb-6 flex-shrink-0"
       >
         <h2
-          class="text-xl font-semibold"
+          class="text-xl font-bold text-gray-900"
         >
           Create New Booking
         </h2>
         <button
-          class="text-gray-500 hover:text-gray-700"
+          class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors"
         >
-          ✕
+          <span
+            class="text-gray-500 font-bold"
+          >
+            ×
+          </span>
         </button>
       </div>
       <form
-        class="space-y-4"
+        class="flex-1 space-y-6"
       >
         <div>
           <label
-            class="block text-sm font-medium text-gray-700 mb-1"
+            class="block text-sm font-semibold text-gray-700 mb-2"
           >
             Room *
           </label>
           <select
-            class="w-full px-3 py-2 border rounded-md border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white shadow-sm border-gray-300"
           >
             <option
               value=""
@@ -502,39 +518,39 @@ exports[`BookingForm matches snapshot with validation errors 1`] = `
         >
           <div>
             <label
-              class="block text-sm font-medium text-gray-700 mb-1"
+              class="block text-sm font-semibold text-gray-700 mb-2"
             >
               Check-in Date *
             </label>
             <input
-              class="w-full px-3 py-2 border rounded-md border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              min="2025-08-07"
+              class="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white shadow-sm border-gray-300"
+              min="2025-08-15"
               type="date"
-              value="2025-08-07"
+              value="2025-08-15"
             />
           </div>
           <div>
             <label
-              class="block text-sm font-medium text-gray-700 mb-1"
+              class="block text-sm font-semibold text-gray-700 mb-2"
             >
               Check-out Date *
             </label>
             <input
-              class="w-full px-3 py-2 border rounded-md border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              min="2025-08-07"
+              class="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white shadow-sm border-gray-300"
+              min="2025-08-15"
               type="date"
-              value="2025-08-08"
+              value="2025-08-16"
             />
           </div>
         </div>
         <div>
           <label
-            class="block text-sm font-medium text-gray-700 mb-1"
+            class="block text-sm font-semibold text-gray-700 mb-2"
           >
             Number of Guests *
           </label>
           <input
-            class="w-full px-3 py-2 border rounded-md border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white shadow-sm border-gray-300"
             max="10"
             min="1"
             type="number"
@@ -542,16 +558,16 @@ exports[`BookingForm matches snapshot with validation errors 1`] = `
           />
         </div>
         <div
-          class="flex space-x-3 pt-4"
+          class="flex space-x-4 pt-6"
         >
           <button
-            class="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="flex-1 px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 font-semibold hover:bg-gray-50 transition-all duration-200"
             type="button"
           >
             Cancel
           </button>
           <button
-            class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            class="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             type="submit"
           >
             Create Booking

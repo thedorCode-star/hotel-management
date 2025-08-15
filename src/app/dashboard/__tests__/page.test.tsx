@@ -39,26 +39,42 @@ const mockStats = {
     confirmed: 120,
     pending: 15,
     cancelled: 15,
+    active: 120, // Currently checked-in bookings
     today: 8,
-    weekly: 45,
     monthly: 180,
   },
   revenue: {
-    today: 2450,
-    weekly: 12500,
-    monthly: 52000,
-    average: 350,
+    actual: {
+      today: 2450,
+      monthly: 52000,
+    },
+    net: {
+      today: 2450,
+      monthly: 52000,
+    },
+    refunds: {
+      today: 0,
+      monthly: 0,
+    },
+  },
+  payments: {
+    total: 150,
+    completed: 120,
+    successRate: '80%',
   },
   guests: {
     uniqueThisMonth: 85,
     averageStayDuration: 2.5,
   },
-  roomTypes: {
-    'SINGLE': 8,
-    'DOUBLE': 12,
-    'SUITE': 4,
+  financialReconciliation: {
+    grossRevenue: 52000,
+    totalRefunds: 0,
+    netRevenue: 52000,
+    refundRate: 0,
+    paymentCount: 150,
+    refundCount: 0,
+    reconciliationDate: new Date().toISOString(),
   },
-  recentBookings: [],
 };
 
 describe('DashboardPage', () => {
@@ -105,20 +121,32 @@ describe('DashboardPage', () => {
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({ stats: mockStats }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ 
+          revenue: { today: 2450, monthly: 52000, net: 52000 },
+          refunds: { total: { amount: 0, count: 0 } },
+          payments: { completed: { count: 120 }, pending: { count: 15 }, failed: { count: 0 } }
+        }),
       });
 
     render(<DashboardPage />);
     
     await waitFor(() => {
-      expect(screen.getByText('24')).toBeInTheDocument(); // Total Rooms
+      // Look for the specific stats in the basic stats cards section
+      const statsCards = screen.getAllByText('24');
+      expect(statsCards.length).toBeGreaterThan(0);
     });
     
     await waitFor(() => {
-      expect(screen.getByText('120')).toBeInTheDocument(); // Active Bookings
+      const activeBookings = screen.getAllByText('120');
+      expect(activeBookings.length).toBeGreaterThan(0);
     });
     
     await waitFor(() => {
-      expect(screen.getByText('$2,450.00')).toBeInTheDocument(); // Revenue Today
+      const revenueToday = screen.getAllByText('$2,450.00');
+      expect(revenueToday.length).toBeGreaterThan(0);
     });
   });
 
@@ -131,9 +159,34 @@ describe('DashboardPage', () => {
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({ stats: mockStats }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ 
+          revenue: { today: 2450, monthly: 52000, net: 52000 },
+          refunds: { total: { amount: 0, count: 0 } },
+          payments: { completed: { count: 120 }, pending: { count: 15 }, failed: { count: 0 } }
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ stats: mockStats }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ 
+          revenue: { today: 2450, monthly: 52000, net: 52000 },
+          refunds: { total: { amount: 0, count: 0 } },
+          payments: { completed: { count: 120 }, pending: { count: 15 }, failed: { count: 0 } }
+        }),
       });
 
     render(<DashboardPage />);
+    
+    // Wait for stats to load first
+    await waitFor(() => {
+      expect(screen.getAllByText('24').length).toBeGreaterThan(0);
+    });
     
     await waitFor(() => {
       expect(screen.getByText('Refresh')).toBeInTheDocument();
@@ -144,7 +197,7 @@ describe('DashboardPage', () => {
     
     // Should trigger another fetch call for stats
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledTimes(2); // Initial auth + stats (refresh is the same as initial stats call)
+      expect(global.fetch).toHaveBeenCalledTimes(5); // Initial auth + stats + financial + refresh stats + refresh financial
     });
   });
 
@@ -172,6 +225,14 @@ describe('DashboardPage', () => {
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({ stats: mockStats }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ 
+          revenue: { today: 2450, monthly: 52000, net: 52000 },
+          refunds: { total: { amount: 0, count: 0 } },
+          payments: { completed: { count: 120 }, pending: { count: 15 }, failed: { count: 0 } }
+        }),
       });
 
     render(<DashboardPage />);
@@ -182,7 +243,9 @@ describe('DashboardPage', () => {
       expect(screen.getByText('Guest Management')).toBeInTheDocument();
       expect(screen.getByText('Reviews & Ratings')).toBeInTheDocument();
       expect(screen.getByText('Analytics')).toBeInTheDocument();
-      expect(screen.getByText('Settings')).toBeInTheDocument();
+      // Check that Settings appears at least once
+      const settingsElements = screen.getAllByText('Settings');
+      expect(settingsElements.length).toBeGreaterThan(0);
     });
   });
 
@@ -195,6 +258,14 @@ describe('DashboardPage', () => {
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({ stats: mockStats }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ 
+          revenue: { today: 2450, monthly: 52000, net: 52000 },
+          refunds: { total: { amount: 0, count: 0 } },
+          payments: { completed: { count: 120 }, pending: { count: 15 }, failed: { count: 0 } }
+        }),
       });
 
     render(<DashboardPage />);
@@ -213,6 +284,14 @@ describe('DashboardPage', () => {
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({ stats: mockStats }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ 
+          revenue: { today: 2450, monthly: 52000, net: 52000 },
+          refunds: { total: { amount: 0, count: 0 } },
+          payments: { completed: { count: 120 }, pending: { count: 15 }, failed: { count: 0 } }
+        }),
       });
 
     render(<DashboardPage />);

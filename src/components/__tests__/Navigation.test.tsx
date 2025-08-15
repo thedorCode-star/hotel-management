@@ -35,12 +35,21 @@ describe('Navigation', () => {
     localStorageMock.getItem.mockReturnValue(null);
   });
 
-  it('renders navigation without user', () => {
+  it('renders navigation without user', async () => {
+    // Mock the auth check to return no user
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: false,
+      status: 401,
+    });
+
     render(<Navigation />);
     
-    expect(screen.getByText('Hotel Management')).toBeInTheDocument();
-    expect(screen.getByText('Sign In')).toBeInTheDocument();
-    expect(screen.getByText('Sign Up')).toBeInTheDocument();
+    // Wait for the auth check to complete
+    await waitFor(() => {
+      expect(screen.getByText('Hotel Management')).toBeInTheDocument();
+      expect(screen.getByText('Sign In')).toBeInTheDocument();
+      expect(screen.getByText('Sign Up')).toBeInTheDocument();
+    });
   });
 
   it('handles logout', async () => {

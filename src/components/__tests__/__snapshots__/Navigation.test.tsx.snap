@@ -3,7 +3,7 @@
 exports[`Navigation matches snapshot for admin user 1`] = `
 <div>
   <nav
-    class="bg-white shadow"
+    class="bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/70 border-b border-gray-100"
   >
     <div
       class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
@@ -15,32 +15,38 @@ exports[`Navigation matches snapshot for admin user 1`] = `
           class="flex items-center"
         >
           <a
-            class="flex-shrink-0"
+            class="flex-shrink-0 group"
             href="/"
           >
             <h1
-              class="text-xl font-bold text-blue-600"
+              class="text-xl font-bold text-blue-600 group-hover:text-blue-700 transition-colors"
             >
               Hotel Management
             </h1>
           </a>
           <div
-            class="hidden md:ml-6 md:flex md:space-x-8"
+            class="hidden md:ml-6 md:flex md:space-x-1"
           >
             <a
-              class="text-gray-900 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
-              href="/rooms"
+              class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50/60 transition-colors"
+              href="/dashboard/rooms"
             >
               Rooms
             </a>
             <a
-              class="text-gray-900 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
+              class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50/60 transition-colors"
               href="/dashboard"
             >
               Dashboard
             </a>
             <a
-              class="text-gray-900 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
+              class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50/60 transition-colors"
+              href="/dashboard/bookings"
+            >
+              Bookings
+            </a>
+            <a
+              class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50/60 transition-colors"
               href="/dashboard/admin"
             >
               Admin
@@ -54,9 +60,11 @@ exports[`Navigation matches snapshot for admin user 1`] = `
             class="relative"
           >
             <button
-              class="flex items-center space-x-2 text-gray-900 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
+              class="flex items-center space-x-2 text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-50/60 transition-colors"
             >
-              <span>
+              <span
+                class="truncate max-w-[140px]"
+              >
                 Admin User
               </span>
               <svg
@@ -79,7 +87,7 @@ exports[`Navigation matches snapshot for admin user 1`] = `
           class="md:hidden flex items-center"
         >
           <button
-            class="text-gray-900 hover:text-blue-600 p-2"
+            class="text-gray-700 hover:text-blue-600 p-2"
           >
             <svg
               class="h-6 w-6"
@@ -105,7 +113,7 @@ exports[`Navigation matches snapshot for admin user 1`] = `
 exports[`Navigation matches snapshot for authenticated user 1`] = `
 <div>
   <nav
-    class="bg-white shadow"
+    class="bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/70 border-b border-gray-100"
   >
     <div
       class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
@@ -117,29 +125,35 @@ exports[`Navigation matches snapshot for authenticated user 1`] = `
           class="flex items-center"
         >
           <a
-            class="flex-shrink-0"
+            class="flex-shrink-0 group"
             href="/"
           >
             <h1
-              class="text-xl font-bold text-blue-600"
+              class="text-xl font-bold text-blue-600 group-hover:text-blue-700 transition-colors"
             >
               Hotel Management
             </h1>
           </a>
           <div
-            class="hidden md:ml-6 md:flex md:space-x-8"
+            class="hidden md:ml-6 md:flex md:space-x-1"
           >
             <a
-              class="text-gray-900 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
-              href="/rooms"
+              class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50/60 transition-colors"
+              href="/dashboard/rooms"
             >
               Rooms
             </a>
             <a
-              class="text-gray-900 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
+              class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50/60 transition-colors"
               href="/dashboard"
             >
               Dashboard
+            </a>
+            <a
+              class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50/60 transition-colors"
+              href="/dashboard/bookings"
+            >
+              Bookings
             </a>
           </div>
         </div>
@@ -150,9 +164,11 @@ exports[`Navigation matches snapshot for authenticated user 1`] = `
             class="relative"
           >
             <button
-              class="flex items-center space-x-2 text-gray-900 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
+              class="flex items-center space-x-2 text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-50/60 transition-colors"
             >
-              <span>
+              <span
+                class="truncate max-w-[140px]"
+              >
                 John Doe
               </span>
               <svg
@@ -175,7 +191,7 @@ exports[`Navigation matches snapshot for authenticated user 1`] = `
           class="md:hidden flex items-center"
         >
           <button
-            class="text-gray-900 hover:text-blue-600 p-2"
+            class="text-gray-700 hover:text-blue-600 p-2"
           >
             <svg
               class="h-6 w-6"
@@ -232,7 +248,7 @@ exports[`Navigation matches snapshot for loading state 1`] = `
 exports[`Navigation matches snapshot for mobile menu open 1`] = `
 <div>
   <nav
-    class="bg-white shadow"
+    class="bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/70 border-b border-gray-100"
   >
     <div
       class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
@@ -244,29 +260,35 @@ exports[`Navigation matches snapshot for mobile menu open 1`] = `
           class="flex items-center"
         >
           <a
-            class="flex-shrink-0"
+            class="flex-shrink-0 group"
             href="/"
           >
             <h1
-              class="text-xl font-bold text-blue-600"
+              class="text-xl font-bold text-blue-600 group-hover:text-blue-700 transition-colors"
             >
               Hotel Management
             </h1>
           </a>
           <div
-            class="hidden md:ml-6 md:flex md:space-x-8"
+            class="hidden md:ml-6 md:flex md:space-x-1"
           >
             <a
-              class="text-gray-900 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
-              href="/rooms"
+              class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50/60 transition-colors"
+              href="/dashboard/rooms"
             >
               Rooms
             </a>
             <a
-              class="text-gray-900 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
+              class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50/60 transition-colors"
               href="/dashboard"
             >
               Dashboard
+            </a>
+            <a
+              class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50/60 transition-colors"
+              href="/dashboard/bookings"
+            >
+              Bookings
             </a>
           </div>
         </div>
@@ -277,9 +299,11 @@ exports[`Navigation matches snapshot for mobile menu open 1`] = `
             class="relative"
           >
             <button
-              class="flex items-center space-x-2 text-gray-900 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
+              class="flex items-center space-x-2 text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-50/60 transition-colors"
             >
-              <span>
+              <span
+                class="truncate max-w-[140px]"
+              >
                 John Doe
               </span>
               <svg
@@ -297,22 +321,22 @@ exports[`Navigation matches snapshot for mobile menu open 1`] = `
               </svg>
             </button>
             <div
-              class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50"
+              class="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg ring-1 ring-black/5 py-2 z-50"
             >
               <a
-                class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                 href="/dashboard/user"
               >
                 My Profile
               </a>
               <a
-                class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                 href="/dashboard/bookings"
               >
                 My Bookings
               </a>
               <button
-                class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
               >
                 Sign Out
               </button>
@@ -323,7 +347,7 @@ exports[`Navigation matches snapshot for mobile menu open 1`] = `
           class="md:hidden flex items-center"
         >
           <button
-            class="text-gray-900 hover:text-blue-600 p-2"
+            class="text-gray-700 hover:text-blue-600 p-2"
           >
             <svg
               class="h-6 w-6"
@@ -349,7 +373,7 @@ exports[`Navigation matches snapshot for mobile menu open 1`] = `
         >
           <a
             class="text-gray-900 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium"
-            href="/rooms"
+            href="/dashboard/rooms"
           >
             Rooms
           </a>
@@ -397,67 +421,16 @@ exports[`Navigation matches snapshot for unauthenticated user 1`] = `
         <div
           class="flex items-center"
         >
-          <a
-            class="flex-shrink-0"
-            href="/"
-          >
-            <h1
-              class="text-xl font-bold text-blue-600"
-            >
-              Hotel Management
-            </h1>
-          </a>
           <div
-            class="hidden md:ml-6 md:flex md:space-x-8"
-          >
-            <a
-              class="text-gray-900 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
-              href="/rooms"
-            >
-              Rooms
-            </a>
-          </div>
+            class="animate-pulse bg-gray-200 h-8 w-32 rounded"
+          />
         </div>
         <div
           class="flex items-center"
         >
           <div
-            class="flex space-x-4"
-          >
-            <a
-              class="text-gray-900 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
-              href="/auth/login"
-            >
-              Sign In
-            </a>
-            <a
-              class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700"
-              href="/auth/register"
-            >
-              Sign Up
-            </a>
-          </div>
-        </div>
-        <div
-          class="md:hidden flex items-center"
-        >
-          <button
-            class="text-gray-900 hover:text-blue-600 p-2"
-          >
-            <svg
-              class="h-6 w-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                d="M4 6h16M4 12h16M4 18h16"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-              />
-            </svg>
-          </button>
+            class="animate-pulse bg-gray-200 h-8 w-24 rounded"
+          />
         </div>
       </div>
     </div>

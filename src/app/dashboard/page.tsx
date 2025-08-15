@@ -63,6 +63,10 @@ interface DashboardStats {
     completed: number;
     successRate: string;
   };
+  guests: {
+    uniqueThisMonth: number;
+    averageStayDuration: number;
+  };
   financialReconciliation?: {
     grossRevenue: number;
     totalRefunds: number;
@@ -271,6 +275,41 @@ export default function DashboardPage() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Navigation Links */}
+        <div className="mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <Link href="/dashboard/bookings" className="flex flex-col items-center p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200 border border-gray-200 hover:border-indigo-300">
+              <Calendar className="h-8 w-8 text-indigo-600 mb-2" />
+              <span className="text-sm font-medium text-gray-900 text-center">Manage Bookings</span>
+            </Link>
+            
+            <Link href="/dashboard/rooms" className="flex flex-col items-center p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200 border border-gray-200 hover:border-indigo-300">
+              <Bed className="h-8 w-8 text-indigo-600 mb-2" />
+              <span className="text-sm font-medium text-gray-900 text-center">Room Management</span>
+            </Link>
+            
+            <Link href="/dashboard/user" className="flex flex-col items-center p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200 border border-gray-200 hover:border-indigo-300">
+              <Users className="h-8 w-8 text-indigo-600 mb-2" />
+              <span className="text-sm font-medium text-gray-900 text-center">Guest Management</span>
+            </Link>
+            
+            <Link href="/dashboard/reviews" className="flex flex-col items-center p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200 border border-gray-200 hover:border-indigo-300">
+              <Star className="h-8 w-8 text-indigo-600 mb-2" />
+              <span className="text-sm font-medium text-gray-900 text-center">Reviews & Ratings</span>
+            </Link>
+            
+            <Link href="/dashboard/analytics" className="flex flex-col items-center p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200 border border-gray-200 hover:border-indigo-300">
+              <TrendingUp className="h-8 w-8 text-indigo-600 mb-2" />
+              <span className="text-sm font-medium text-gray-900 text-center">Analytics</span>
+            </Link>
+            
+            <Link href="/dashboard/settings" className="flex flex-col items-center p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200 border border-gray-200 hover:border-indigo-300">
+              <Building2 className="h-8 w-8 text-indigo-600 mb-2" />
+              <span className="text-sm font-medium text-gray-900 text-center">Settings</span>
+            </Link>
+          </div>
+        </div>
+
         {/* Stats Header */}
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center space-x-3">
@@ -324,6 +363,71 @@ export default function DashboardPage() {
             </div>
           </div>
         )}
+
+        {/* Basic Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                <Bed className="h-6 w-6 text-blue-600" />
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-gray-600">Total Rooms</p>
+                <p className="text-2xl font-bold text-gray-900">{stats?.rooms?.total || 0}</p>
+              </div>
+            </div>
+            <div className="text-center">
+              <p className="text-sm text-gray-600">Available: {stats?.rooms?.available || 0}</p>
+              <p className="text-sm text-gray-600">Occupied: {stats?.rooms?.occupied || 0}</p>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                <Calendar className="h-6 w-6 text-green-600" />
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-gray-600">Active Bookings</p>
+                <p className="text-2xl font-bold text-gray-900">{stats?.bookings?.active || 0}</p>
+              </div>
+            </div>
+            <div className="text-center">
+              <p className="text-sm text-gray-600">Total: {stats?.bookings?.total || 0}</p>
+              <p className="text-sm text-gray-600">Today: {stats?.bookings?.today || 0}</p>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+                <DollarSign className="h-6 w-6 text-purple-600" />
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-gray-600">Revenue Today</p>
+                <p className="text-2xl font-bold text-gray-900">{formatCurrency(stats?.revenue?.actual?.today || 0)}</p>
+              </div>
+            </div>
+            <div className="text-center">
+              <p className="text-sm text-gray-600">Monthly: {formatCurrency(stats?.revenue?.actual?.monthly || 0)}</p>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
+                <Users className="h-6 w-6 text-orange-600" />
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-gray-600">Occupancy Rate</p>
+                <p className="text-2xl font-bold text-gray-900">{stats?.rooms?.occupancyRate || 0}%</p>
+              </div>
+            </div>
+            <div className="text-center">
+              <p className="text-sm text-gray-600">Monthly Guests: {stats?.guests?.uniqueThisMonth || 0}</p>
+            </div>
+          </div>
+        </div>
 
         {/* **NEW: Interactive Financial Analytics Cards */}
         {isStatsLoading ? (

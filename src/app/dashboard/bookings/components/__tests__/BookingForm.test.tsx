@@ -50,8 +50,8 @@ describe('BookingForm', () => {
     });
     
     expect(screen.getByRole('combobox')).toBeInTheDocument(); // Room select
-    expect(screen.getAllByDisplayValue('2025-08-07')[0]).toBeInTheDocument(); // Check-in date
-    expect(screen.getAllByDisplayValue('2025-08-08')[0]).toBeInTheDocument(); // Check-out date
+    expect(screen.getAllByDisplayValue('2025-08-15')[0]).toBeInTheDocument(); // Check-in date
+    expect(screen.getAllByDisplayValue('2025-08-16')[0]).toBeInTheDocument(); // Check-out date
     expect(screen.getByRole('spinbutton')).toBeInTheDocument(); // Guest count
   });
 
@@ -100,9 +100,9 @@ describe('BookingForm', () => {
     const roomSelect = screen.getByRole('combobox');
     fireEvent.change(roomSelect, { target: { value: '1' } });
     
-    const dateInputs = screen.getAllByDisplayValue('2025-08-07');
+    const dateInputs = screen.getAllByDisplayValue('2025-08-15');
     const checkInInput = dateInputs[0];
-    const checkOutInput = screen.getByDisplayValue('2025-08-08');
+    const checkOutInput = screen.getByDisplayValue('2025-08-16');
     
     const today = new Date();
     const tomorrow = new Date(today);
@@ -140,9 +140,9 @@ describe('BookingForm', () => {
     const roomSelect = screen.getByRole('combobox');
     fireEvent.change(roomSelect, { target: { value: '1' } });
     
-    const dateInputs = screen.getAllByDisplayValue('2025-08-07');
+    const dateInputs = screen.getAllByDisplayValue('2025-08-15');
     const checkInInput = dateInputs[0];
-    const checkOutInput = screen.getByDisplayValue('2025-08-08');
+    const checkOutInput = screen.getByDisplayValue('2025-08-16');
     
     const today = new Date();
     const tomorrow = new Date(today);
