@@ -19,6 +19,7 @@ export function middleware(request: NextRequest) {
     pathname === '/' ||
     pathname.startsWith('/auth/') ||
     pathname.startsWith('/api/auth/') ||
+    pathname === '/rooms' ||
     pathname.startsWith('/_next/') ||
     pathname.startsWith('/favicon.ico') ||
     pathname.startsWith('/public/')
@@ -32,7 +33,7 @@ export function middleware(request: NextRequest) {
   }
 
   // Check if route requires authentication
-  if (pathname.startsWith('/dashboard') || pathname.startsWith('/api/')) {
+  if (pathname.startsWith('/dashboard')) {
     const token = request.cookies.get('auth-token')?.value;
     
     console.log('=== MIDDLEWARE DEBUG ===');
@@ -42,10 +43,39 @@ export function middleware(request: NextRequest) {
 
     if (!token) {
       // Redirect to login for dashboard routes
-      if (pathname.startsWith('/dashboard')) {
-        return NextResponse.redirect(new URL('/auth/login', request.url));
-      }
-      // Return 401 for API routes
+      return NextResponse.redirect(new URL('/auth/login', request.url));
+    }
+  }
+
+  // Check API routes that require authentication
+  if (pathname.startsWith('/api/')) {
+    // Allow public access to certain API endpoints
+    const publicApiEndpoints = [
+      '/api/rooms',           // Public room viewing
+      '/api/auth/login',      // Login endpoint
+      '/api/auth/register',   // Registration endpoint
+    ];
+    
+    // Check if this is a public API endpoint
+    const isPublicEndpoint = publicApiEndpoints.some(endpoint => 
+      pathname === endpoint || pathname.startsWith(endpoint)
+    );
+    
+    if (isPublicEndpoint) {
+      console.log('🌐 Public API endpoint, allowing access:', pathname);
+      return NextResponse.next();
+    }
+    
+    // For protected API endpoints, require authentication
+    const token = request.cookies.get('auth-token')?.value;
+    
+    console.log('=== MIDDLEWARE DEBUG ===');
+    console.log('Pathname:', pathname);
+    console.log('Token present:', !!token);
+    console.log('Token value:', token ? token.substring(0, 20) + '...' : 'none');
+
+    if (!token) {
+      // Return 401 for protected API routes
       return NextResponse.json(
         { message: 'Authentication required' },
         { status: 401 }
@@ -90,6 +120,5 @@ export const config = {
   matcher: [
     '/dashboard/:path*',
     '/api/:path*',
-    '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 };

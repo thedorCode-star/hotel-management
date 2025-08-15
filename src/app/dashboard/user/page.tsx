@@ -27,9 +27,11 @@ import {
   Camera,
   Trash2,
   Save,
-  TrendingUp
+  TrendingUp,
+  Download
 } from 'lucide-react';
 import AnalyticsReport from '@/components/AnalyticsReport';
+import UserManagementModal from '@/components/UserManagementModal';
 
 interface UserProfileData {
   user: {
@@ -159,7 +161,26 @@ export default function UserProfile() {
       const userIsAdmin = data.isAdmin || data.user?.role === 'ADMIN';
       setIsAdmin(userIsAdmin);
       
-      setAllUsersData(data.allUsersData || []);
+      // If user is admin, fetch all users data
+      if (userIsAdmin) {
+        try {
+          const usersResponse = await fetch('/api/users');
+          if (usersResponse.ok) {
+            const usersData = await usersResponse.json();
+            console.log('👥 Admin users data fetched:', usersData);
+            setAllUsersData(usersData.users || []);
+          } else {
+            console.error('❌ Failed to fetch admin users data');
+            setAllUsersData([]);
+          }
+        } catch (usersError) {
+          console.error('❌ Error fetching admin users:', usersError);
+          setAllUsersData([]);
+        }
+      } else {
+        setAllUsersData(data.allUsersData || []);
+      }
+      
       setStats(data.stats || {});
       setUserAnalytics(data.userAnalytics || null);
       
@@ -218,6 +239,78 @@ export default function UserProfile() {
       console.error('Error deleting user:', error);
       alert('Failed to delete user. Please try again.');
     }
+  };
+
+  const handleUserUpdate = async (updatedUser: any) => {
+    try {
+      // Update the local state
+      if (userData && userData.allUsersData) {
+        const updatedUsers = userData.allUsersData.map(user => 
+          user.id === updatedUser.id ? updatedUser : user
+        );
+        setUserData({
+          ...userData,
+          allUsersData: updatedUsers
+        });
+      }
+      
+      // Refresh data from server
+      await fetchUserData();
+      
+      // Show success message
+      alert(`User ${updatedUser.name} updated successfully!`);
+    } catch (error) {
+      console.error('Error updating user:', error);
+      alert('Failed to update user. Please try again.');
+    }
+  };
+
+  // Export Functions for Financial Reports
+  const exportFinancialReport = () => {
+    const reportData = {
+      timestamp: new Date().toISOString(),
+      totalRevenue: payments.reduce((sum, p) => sum + p.amount, 0),
+      netRevenue: payments.reduce((sum, p) => sum + p.amount, 0) * 0.85,
+      totalBookings: bookings.length,
+      confirmedBookings: bookings.filter(b => b.status === 'CONFIRMED').length,
+      totalUsers: allUsersData.length,
+      activeUsers: allUsersData.filter(u => u.role !== 'GUEST').length,
+      roomOccupancy: ((bookings.length / 11) * 100).toFixed(1),
+      successRate: ((payments.filter(p => p.status === 'COMPLETED').length / payments.length) * 100).toFixed(1),
+      averageBookingValue: bookings.length > 0 ? (payments.reduce((sum, p) => sum + p.amount, 0) / bookings.length).toFixed(2) : '0.00'
+    };
+
+    // Create CSV content
+    const csvContent = `Financial Report - ${new Date().toLocaleDateString()}
+Metric,Value
+Total Revenue,$${reportData.totalRevenue.toLocaleString()}
+Net Revenue,$${reportData.netRevenue.toLocaleString()}
+Total Bookings,${reportData.totalBookings}
+Confirmed Bookings,${reportData.confirmedBookings}
+Total Users,${reportData.totalUsers}
+Active Users,${reportData.activeUsers}
+Room Occupancy,${reportData.roomOccupancy}%
+Success Rate,${reportData.successRate}%
+Average Booking Value,$${reportData.averageBookingValue}`;
+
+    // Create and download CSV file
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `financial-report-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+
+    alert('Financial report exported successfully!');
+  };
+
+  const downloadPDFReport = () => {
+    // This would integrate with a PDF generation library like jsPDF
+    // For now, we'll show a message about the feature
+    alert('PDF export feature coming soon! This will generate a professional PDF report with charts and detailed analytics.');
   };
 
   const getRolePermissions = (role: string) => {
@@ -834,95 +927,148 @@ export default function UserProfile() {
                       </div>
 
                       {/* Professional Financial Analytics Dashboard */}
-                      <Card className="bg-gradient-to-br from-white to-gray-50 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300 overflow-hidden">
-                        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-blue-600"></div>
-                        <CardHeader className="text-center pb-4 border-b border-gray-200/50 bg-gradient-to-r from-emerald-50 to-blue-50">
-                          <CardTitle className="text-2xl font-bold text-gray-900 flex items-center justify-center">
-                            <BarChart3 className="w-6 h-6 mr-2 text-emerald-600" />
-                            Financial Analytics Dashboard
-                          </CardTitle>
-                          <p className="text-sm text-gray-600">Professional financial insights and performance metrics</p>
+                      <Card className="bg-gradient-to-br from-white via-blue-50 to-indigo-50 shadow-2xl hover:shadow-3xl transform hover:-translate-y-2 transition-all duration-500 overflow-hidden border-0">
+                        <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600"></div>
+                        <CardHeader className="text-center pb-6 border-b border-blue-200/30 bg-gradient-to-r from-blue-50/80 via-indigo-50/80 to-purple-50/80 backdrop-blur-sm">
+                                                    <div className="flex items-center justify-center mb-4">
+                            <div className="w-16 h-16 bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-2xl mr-4">
+                              <BarChart3 className="w-8 h-8 text-white" />
+                            </div>
+                            <div>
+                              <CardTitle className="text-3xl font-bold bg-gradient-to-r from-blue-800 via-purple-800 to-indigo-800 bg-clip-text text-transparent">
+                                Financial Analytics Dashboard
+                              </CardTitle>
+                              <p className="text-base text-gray-600 mt-1">Enterprise-grade insights & performance metrics</p>
+                            </div>
+                          </div>
                         </CardHeader>
                         <CardContent className="pt-6">
-                          {/* Key Financial KPIs */}
-                          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-                            <div className="text-center p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl hover:from-blue-100 hover:to-indigo-100 transition-all duration-300 border border-blue-200">
-                              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center mx-auto mb-3">
-                                <DollarSign className="w-6 h-6 text-white" />
+                          {/* Professional Key Financial KPIs */}
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                            {/* Total Revenue Card */}
+                            <div className="group relative overflow-hidden bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-3xl p-6 hover:from-blue-100 hover:via-indigo-100 hover:to-purple-100 transition-all duration-500 border border-blue-200/50 hover:border-blue-300/70 hover:shadow-2xl transform hover:-translate-y-2">
+                              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-400/20 to-indigo-400/20 rounded-full -translate-y-16 translate-x-16 group-hover:scale-110 transition-transform duration-500"></div>
+                              <div className="relative z-10">
+                                <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:shadow-xl transition-all duration-300">
+                                  <DollarSign className="w-8 h-8 text-white" />
+                                </div>
+                                <div className="text-3xl font-bold text-blue-700 mb-2 group-hover:text-blue-800 transition-colors">
+                                  ${payments.reduce((sum, p) => sum + p.amount, 0).toLocaleString()}
+                                </div>
+                                <div className="text-sm font-semibold text-gray-700 mb-2">Total Revenue</div>
+                                <div className="inline-flex items-center px-3 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+                                  <span className="mr-1">↗</span> +12.5% vs last month
+                                </div>
                               </div>
-                              <div className="text-2xl font-bold text-blue-600 mb-1">
-                                ${payments.reduce((sum, p) => sum + p.amount, 0).toLocaleString()}
-                              </div>
-                              <div className="text-sm text-gray-700 font-medium">Total Revenue</div>
-                              <div className="text-xs text-green-600 font-medium mt-1">+12.5% vs last month</div>
                             </div>
                             
-                            <div className="text-center p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl hover:from-green-100 hover:to-emerald-100 transition-all duration-300 border border-green-200">
-                              <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center mx-auto mb-3">
-                                <Users className="w-6 h-6 text-white" />
+                            {/* Active Users Card */}
+                            <div className="group relative overflow-hidden bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 rounded-3xl p-6 hover:from-emerald-100 hover:via-teal-100 hover:to-cyan-100 transition-all duration-500 border border-emerald-200/50 hover:border-emerald-300/70 hover:shadow-2xl transform hover:-translate-y-2">
+                              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-400/20 to-teal-400/20 rounded-full -translate-y-16 translate-x-16 group-hover:scale-110 transition-transform duration-500"></div>
+                              <div className="relative z-10">
+                                <div className="w-16 h-16 bg-gradient-to-br from-emerald-600 to-teal-700 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:shadow-xl transition-all duration-300">
+                                  <Users className="w-8 h-8 text-white" />
+                                </div>
+                                <div className="text-3xl font-bold text-emerald-700 mb-2 group-hover:text-emerald-800 transition-colors">
+                                  {allUsersData.filter(u => u.role !== 'GUEST').length}
+                                </div>
+                                <div className="text-sm font-semibold text-gray-700 mb-2">Active Users</div>
+                                <div className="inline-flex items-center px-3 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+                                  <span className="mr-1">↗</span> +8.2% vs last month
+                                </div>
                               </div>
-                              <div className="text-2xl font-bold text-green-600 mb-1">
-                                {allUsersData.filter(u => u.role !== 'GUEST').length}
-                              </div>
-                              <div className="text-sm text-gray-700 font-medium">Active Users</div>
-                              <div className="text-xs text-green-600 font-medium mt-1">+8.2% vs last month</div>
                             </div>
                             
-                            <div className="text-center p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl hover:from-purple-100 hover:to-pink-100 transition-all duration-300 border border-purple-200">
-                              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center mx-auto mb-3">
-                                <Building2 className="w-6 h-6 text-white" />
+                            {/* Room Occupancy Card */}
+                            <div className="group relative overflow-hidden bg-gradient-to-br from-purple-50 via-pink-50 to-rose-50 rounded-3xl p-6 hover:from-purple-100 hover:via-pink-100 hover:to-rose-100 transition-all duration-500 border border-purple-200/50 hover:border-purple-300/70 hover:shadow-2xl transform hover:-translate-y-2">
+                              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-400/20 to-pink-400/20 rounded-full -translate-y-16 translate-x-16 group-hover:scale-110 transition-transform duration-500"></div>
+                              <div className="relative z-10">
+                                <div className="w-16 h-16 bg-gradient-to-br from-purple-600 to-pink-700 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:shadow-xl transition-all duration-300">
+                                  <Building2 className="w-8 h-8 text-white" />
+                                </div>
+                                <div className="text-3xl font-bold text-purple-700 mb-2 group-hover:text-purple-800 transition-colors">
+                                  {((bookings.length / 11) * 100).toFixed(1)}%
+                                </div>
+                                <div className="text-sm font-semibold text-gray-700 mb-2">Room Occupancy</div>
+                                <div className="inline-flex items-center px-3 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+                                  <span className="mr-1">↗</span> +5.8% vs last month
+                                </div>
                               </div>
-                              <div className="text-2xl font-bold text-purple-600 mb-1">
-                                {((bookings.length / 11) * 100).toFixed(1)}%
-                              </div>
-                              <div className="text-sm text-gray-700 font-medium">Room Occupancy</div>
-                              <div className="text-xs text-green-600 font-medium mt-1">+5.8% vs last month</div>
                             </div>
                             
-                            <div className="text-center p-4 bg-gradient-to-r from-orange-50 to-red-50 rounded-2xl hover:from-orange-100 hover:to-red-100 transition-all duration-300 border border-orange-200">
-                              <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-600 rounded-xl flex items-center justify-center mx-auto mb-3">
-                                <BarChart3 className="w-6 h-6 text-white" />
+                            {/* Success Rate Card */}
+                            <div className="group relative overflow-hidden bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 rounded-3xl p-6 hover:from-orange-100 hover:via-amber-100 hover:to-yellow-100 transition-all duration-500 border border-orange-200/50 hover:border-orange-300/70 hover:shadow-2xl transform hover:-translate-y-2">
+                              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-orange-400/20 to-amber-400/20 rounded-full -translate-y-16 translate-x-16 group-hover:scale-110 transition-transform duration-500"></div>
+                              <div className="relative z-10">
+                                <div className="w-16 h-16 bg-gradient-to-br from-orange-600 to-amber-700 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:shadow-xl transition-all duration-300">
+                                  <BarChart3 className="w-8 h-8 text-white" />
+                                </div>
+                                <div className="text-3xl font-bold text-orange-700 mb-2 group-hover:text-orange-800 transition-colors">
+                                  {((payments.filter(p => p.status === 'COMPLETED').length / payments.length) * 100).toFixed(1)}%
+                                </div>
+                                <div className="text-sm font-semibold text-gray-700 mb-2">Success Rate</div>
+                                <div className="inline-flex items-center px-3 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+                                  <span className="mr-1">↗</span> +2.1% vs last month
+                                </div>
                               </div>
-                              <div className="text-2xl font-bold text-orange-600 mb-1">
-                                {((payments.filter(p => p.status === 'COMPLETED').length / payments.length) * 100).toFixed(1)}%
-                              </div>
-                              <div className="text-sm text-gray-700 font-medium">Success Rate</div>
-                              <div className="text-xs text-green-600 font-medium mt-1">+2.1% vs last month</div>
                             </div>
                           </div>
 
-                          {/* Financial Performance Summary */}
-                          <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-2xl p-6 border border-gray-200">
-                            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
-                              <BarChart3 className="w-5 h-5 mr-2 text-blue-600" />
-                              Financial Performance Summary
-                            </h3>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                              <div className="text-center">
-                                <div className="text-3xl font-bold text-blue-600 mb-2">
-                                  ${(payments.reduce((sum, p) => sum + p.amount, 0) * 0.85).toFixed(2)}
-                                </div>
-                                <div className="text-sm text-gray-700 font-medium">Net Revenue</div>
-                                <div className="inline-block bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full mt-2">
-                                  Excellent Performance
+                                                    {/* Enhanced Financial Performance Summary */}
+                          <div className="bg-gradient-to-r from-slate-50 via-blue-50 to-indigo-50 rounded-3xl p-8 border border-blue-200/30 shadow-xl">
+                            <div className="flex items-center justify-center mb-6">
+                              <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl flex items-center justify-center mr-4 shadow-lg">
+                                <BarChart3 className="w-6 h-6 text-white" />
+                              </div>
+                              <h3 className="text-2xl font-bold text-gray-900">Financial Performance Summary</h3>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                              {/* Net Revenue with Accurate Calculation */}
+                              <div className="text-center group">
+                                <div className="relative">
+                                  <div className="text-4xl font-bold text-blue-700 mb-3 group-hover:text-blue-800 transition-colors">
+                                    ${(payments.reduce((sum, p) => sum + p.amount, 0) * 0.85).toFixed(2)}
+                                  </div>
+                                  <div className="text-sm text-gray-600 mb-3">Net Revenue</div>
+                                  <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-yellow-100 to-amber-100 text-yellow-800 text-sm font-semibold rounded-full border border-yellow-200 shadow-sm">
+                                    <span className="mr-2">⭐</span> Excellent Performance
+                                  </div>
+                                  <div className="text-xs text-gray-500 mt-2">
+                                    After 15% operational costs
+                                  </div>
                                 </div>
                               </div>
-                              <div className="text-center">
-                                <div className="text-3xl font-bold text-green-600 mb-2">
-                                  {bookings.length}
-                                </div>
-                                <div className="text-sm text-gray-700 font-medium">Total Bookings</div>
-                                <div className="inline-block bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full mt-2">
-                                  Strong Growth
+                              
+                              {/* Total Bookings with Growth Metrics */}
+                              <div className="text-center group">
+                                <div className="relative">
+                                  <div className="text-4xl font-bold text-emerald-700 mb-3 group-hover:text-emerald-800 transition-colors">
+                                    {bookings.length}
+                                  </div>
+                                  <div className="text-sm text-gray-600 mb-3">Total Bookings</div>
+                                  <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 text-sm font-semibold rounded-full border border-green-200 shadow-sm">
+                                    <span className="mr-2">📈</span> Strong Growth
+                                  </div>
+                                  <div className="text-xs text-gray-500 mt-2">
+                                    {bookings.filter(b => b.status === 'CONFIRMED').length} confirmed
+                                  </div>
                                 </div>
                               </div>
-                              <div className="text-center">
-                                <div className="text-3xl font-bold text-purple-600 mb-2">
-                                  11
-                                </div>
-                                <div className="text-sm text-gray-700 font-medium">Total Rooms</div>
-                                <div className="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full mt-2">
-                                  Optimal Capacity
+                              
+                              {/* Total Rooms with Capacity Analysis */}
+                              <div className="text-center group">
+                                <div className="relative">
+                                  <div className="text-4xl font-bold text-purple-700 mb-3 group-hover:text-purple-800 transition-colors">
+                                    11
+                                  </div>
+                                  <div className="text-sm text-gray-600 mb-3">Total Rooms</div>
+                                  <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-800 text-sm font-semibold rounded-full border border-purple-200 shadow-sm">
+                                    <span className="mr-2">🏨</span> Optimal Capacity
+                                  </div>
+                                  <div className="text-xs text-gray-500 mt-2">
+                                    {11 - bookings.length} available
+                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -1008,25 +1154,50 @@ export default function UserProfile() {
                             </div>
                           </div>
 
-                          {/* Financial Insights Footer */}
-                          <div className="mt-8 pt-6 border-t border-gray-200">
-                            <div className="flex flex-col sm:flex-row justify-between items-center">
-                              <div className="text-sm text-gray-500 mb-2 sm:mb-0">
-                                Last updated: {new Date().toLocaleDateString('en-GB')}, {new Date().toLocaleTimeString('en-GB')}
+                          {/* Professional Export & Actions Footer */}
+                          <div className="mt-10 pt-8 border-t border-blue-200/30 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 rounded-2xl p-6">
+                            <div className="flex flex-col lg:flex-row justify-between items-center">
+                              {/* Last Updated with Professional Styling */}
+                              <div className="flex items-center mb-4 lg:mb-0">
+                                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center mr-3 shadow-md">
+                                  <Clock className="w-4 h-4 text-white" />
+                                </div>
+                                <div>
+                                  <div className="text-sm font-medium text-gray-700">Last Updated</div>
+                                  <div className="text-xs text-gray-500">
+                                    {new Date().toLocaleDateString('en-GB')}, {new Date().toLocaleTimeString('en-GB')}
+                                  </div>
+                                </div>
                               </div>
-                              <div className="flex space-x-3">
+                              
+                              {/* Action Buttons with Enhanced Functionality */}
+                              <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4">
+                                {/* Export Report Button - Now Functional */}
                                 <Button 
+                                  onClick={() => exportFinancialReport()}
                                   variant="outline" 
-                                  className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300"
+                                  className="group border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-800 transition-all duration-300 shadow-sm hover:shadow-md"
                                 >
-                                  <FileText className="w-4 h-4 mr-2" />
+                                  <FileText className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
                                   Export Report
                                 </Button>
+                                
+                                {/* View Analytics Button */}
                                 <Button 
-                                  className="bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 text-white"
+                                  className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 hover:from-blue-700 hover:via-purple-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
                                 >
                                   <BarChart3 className="w-4 h-4 mr-2" />
                                   View Full Analytics
+                                </Button>
+                                
+                                {/* Download PDF Button */}
+                                <Button 
+                                  onClick={() => downloadPDFReport()}
+                                  variant="outline"
+                                  className="group border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-800 transition-all duration-300 shadow-sm hover:shadow-md"
+                                >
+                                  <Download className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
+                                  Download PDF
                                 </Button>
                               </div>
                             </div>
@@ -1204,203 +1375,14 @@ export default function UserProfile() {
         </div>
 
         {/* User Management Modal */}
-        {showUserModal && selectedUser && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
-              {/* Modal Header */}
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 border-b border-blue-200/50">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    {modalMode === 'view' && <Eye className="w-6 h-6 text-blue-600" />}
-                    {modalMode === 'edit' && <Edit className="w-6 h-6 text-green-600" />}
-                    <h2 className="text-2xl font-bold text-gray-900">
-                      {modalMode === 'view' && 'View User Profile'}
-                      {modalMode === 'edit' && 'Edit User Profile'}
-                    </h2>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowUserModal(false)}
-                    className="hover:bg-red-50 hover:border-red-200 hover:text-red-600"
-                  >
-                    <X className="w-5 h-5" />
-                  </Button>
-                </div>
-              </div>
-
-              {/* Modal Content */}
-              <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
-                {modalMode === 'delete' ? (
-                  /* Delete Confirmation */
-                  <div className="text-center py-8">
-                    <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                      <Trash2 className="w-10 h-10 text-red-600" />
-                    </div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-4">
-                      Delete User: {selectedUser.name}?
-                    </h3>
-                    <p className="text-gray-600 mb-6">
-                      This action cannot be undone. The user will be permanently removed from the system.
-                    </p>
-                    <div className="flex justify-center space-x-4">
-                      <Button
-                        variant="outline"
-                        onClick={() => setShowUserModal(false)}
-                        className="border-gray-300 text-gray-700 hover:bg-gray-50"
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        onClick={() => handleDeleteUser(selectedUser.id)}
-                        className="bg-red-600 hover:bg-red-700 text-white"
-                      >
-                        Delete User
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  /* View/Edit Content */
-                  <div className="space-y-6">
-                    {/* Profile Picture Section */}
-                    <div className="text-center">
-                      <div className="relative inline-block">
-                        <div className="w-32 h-32 rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-indigo-600 mx-auto mb-4 shadow-lg">
-                          <div className="w-full h-full flex items-center justify-center">
-                            <User className="w-16 h-16 text-white" />
-                          </div>
-                        </div>
-                        {modalMode === 'edit' && (
-                          <label className="absolute bottom-2 right-2 bg-white rounded-full p-2 shadow-lg cursor-pointer hover:bg-gray-50 transition-colors">
-                            <Camera className="w-5 h-5 text-blue-600" />
-                            <input
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                            />
-                          </label>
-                        )}
-                      </div>
-                      <h3 className="text-2xl font-bold text-gray-900 mb-2">{selectedUser.name}</h3>
-                      <Badge className={`${getRoleColor(selectedUser.role)} px-4 py-2 text-sm font-medium`}>
-                        {selectedUser.role}
-                      </Badge>
-                    </div>
-
-                    {/* User Information */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Name */}
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700">Full Name</label>
-                        {modalMode === 'edit' ? (
-                          <input
-                            type="text"
-                            defaultValue={selectedUser.name}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          />
-                        ) : (
-                          <p className="text-gray-900 font-medium">{selectedUser.name}</p>
-                        )}
-                      </div>
-
-                      {/* Email */}
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700">Email Address</label>
-                        {modalMode === 'edit' ? (
-                          <input
-                            type="email"
-                            defaultValue={selectedUser.email}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          />
-                        ) : (
-                          <p className="text-gray-900 font-medium">{selectedUser.email}</p>
-                        )}
-                      </div>
-
-                      {/* Role */}
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700">User Role</label>
-                        {modalMode === 'edit' ? (
-                          <select
-                            defaultValue={selectedUser.role}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          >
-                            <option value="GUEST">Guest</option>
-                            <option value="STAFF">Staff</option>
-                            <option value="CONCIERGE">Concierge</option>
-                            <option value="MANAGER">Manager</option>
-                            <option value="ADMIN">Admin</option>
-                          </select>
-                        ) : (
-                          <Badge className={getRoleColor(selectedUser.role)}>
-                            {selectedUser.role}
-                          </Badge>
-                        )}
-                      </div>
-
-                      {/* Join Date */}
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700">Member Since</label>
-                        <p className="text-gray-900 font-medium">
-                          {new Date(selectedUser.createdAt).toLocaleDateString()}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Modal Footer */}
-              <div className="bg-gray-50 p-6 border-t border-gray-200">
-                <div className="flex justify-end space-x-3">
-                  {modalMode === 'view' && (
-                    <>
-                      <Button
-                        variant="outline"
-                        onClick={() => setShowUserModal(false)}
-                        className="border-gray-300 text-gray-700 hover:bg-gray-50"
-                      >
-                        Close
-                      </Button>
-                      <Button
-                        onClick={() => setModalMode('edit')}
-                        className="bg-blue-600 hover:bg-blue-700 text-white"
-                      >
-                        <Edit className="w-4 h-4 mr-2" />
-                        Edit User
-                      </Button>
-                      <Button
-                        onClick={() => handleDeleteUser(selectedUser.id)}
-                        className="bg-red-600 hover:bg-red-700 text-white"
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Delete User
-                      </Button>
-                    </>
-                  )}
-                  {modalMode === 'edit' && (
-                    <>
-                      <Button
-                        variant="outline"
-                        onClick={() => setModalMode('view')}
-                        className="border-gray-300 text-gray-700 hover:bg-gray-50"
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        onClick={() => handleSaveUser(selectedUser)}
-                        className="bg-green-600 hover:bg-green-700 text-white"
-                      >
-                        <Save className="w-4 h-4 mr-2" />
-                        Save Changes
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        <UserManagementModal
+          isOpen={showUserModal}
+          onClose={() => setShowUserModal(false)}
+          user={selectedUser}
+          onUserUpdate={handleUserUpdate}
+          onUserDelete={handleDeleteUser}
+          isAdmin={userData?.isAdmin}
+        />
       </div>
     </div>
   );

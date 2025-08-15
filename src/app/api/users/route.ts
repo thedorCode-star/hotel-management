@@ -3,28 +3,73 @@ import { PrismaClient } from '../../../generated/prisma';
 
 const prisma = new PrismaClient();
 
+// GET - Fetch all users (admin only)
 export async function GET(request: NextRequest) {
   try {
+    // Get user role from headers (set by middleware)
+    const userRole = request.headers.get('x-user-role');
+    
+    // Only ADMIN and MANAGER can view all users
+    if (!['ADMIN', 'MANAGER'].includes(userRole || '')) {
+      return NextResponse.json(
+        { message: 'Insufficient permissions' },
+        { status: 403 }
+      );
+    }
+
     const users = await prisma.user.findMany({
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        isActive: true,
-        createdAt: true,
-        lastLogin: true,
+      include: {
+        profile: true,
+        bookings: {
+          select: {
+            id: true,
+            status: true,
+            totalPrice: true,
+            createdAt: true
+          }
+        },
+        reviews: {
+          select: {
+            id: true,
+            rating: true,
+            createdAt: true
+          }
+        }
       },
       orderBy: {
-        createdAt: 'desc',
-      },
+        createdAt: 'desc'
+      }
     });
 
-    return NextResponse.json(users);
+    // Remove sensitive information and format data
+    const safeUsers = users.map(user => {
+      const { password, ...safeUser } = user;
+      return {
+        ...safeUser,
+        // Flatten profile data for easier access
+        phone: safeUser.profile?.phone || null,
+        address: safeUser.profile?.address || null,
+        city: safeUser.profile?.city || null,
+        country: safeUser.profile?.country || null,
+        postalCode: safeUser.profile?.postalCode || null,
+        dateOfBirth: safeUser.profile?.dateOfBirth || null,
+        emergencyContact: safeUser.profile?.emergencyContact || null,
+        preferences: safeUser.profile?.preferences || null,
+        avatar: safeUser.profile?.avatar || null,
+        // Keep profile for backward compatibility
+        profile: safeUser.profile
+      };
+    });
+
+    return NextResponse.json({
+      users: safeUsers,
+      total: safeUsers.length
+    });
+
   } catch (error) {
     console.error('Error fetching users:', error);
     return NextResponse.json(
-      { message: 'Failed to fetch users' },
+      { message: 'Internal server error' },
       { status: 500 }
     );
   }

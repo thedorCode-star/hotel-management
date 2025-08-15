@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Camera, Upload, X, Building, Users, DollarSign, FileText } from 'lucide-react';
 
 interface RoomFormProps {
   room?: {
@@ -25,11 +26,14 @@ export default function RoomForm({ room, mode, onClose }: RoomFormProps) {
   const [formData, setFormData] = useState({
     number: room?.number || '',
     type: room?.type || 'SINGLE',
-    capacity: room?.capacity || 1,
-    price: room?.price || 0,
+    capacity: room?.capacity || '',
+    price: room?.price || '',
     description: room?.description || '',
     status: room?.status || 'AVAILABLE',
   });
+  const [roomImage, setRoomImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>('');
+  const [imageError, setImageError] = useState<string>('');
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -41,11 +45,13 @@ export default function RoomForm({ room, mode, onClose }: RoomFormProps) {
       newErrors.number = 'Room number is required';
     }
 
-    if (formData.capacity < 1 || formData.capacity > 10) {
+    const capacity = Number(formData.capacity);
+    if (!capacity || capacity < 1 || capacity > 10) {
       newErrors.capacity = 'Capacity must be between 1 and 10';
     }
 
-    if (formData.price <= 0) {
+    const price = Number(formData.price);
+    if (!price || price <= 0) {
       newErrors.price = 'Price must be greater than 0';
     }
 
@@ -53,14 +59,31 @@ export default function RoomForm({ room, mode, onClose }: RoomFormProps) {
       newErrors.description = 'Description must be less than 500 characters';
     }
 
+    // Validate image if provided
+    if (roomImage) {
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (roomImage.size > maxSize) {
+        newErrors.image = 'Image size must be less than 5MB';
+      }
+      
+      if (!roomImage.type.startsWith('image/')) {
+        newErrors.image = 'Please select a valid image file';
+      }
+    }
+
     setErrors(newErrors);
+    setImageError(newErrors.image || '');
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    console.log('🚀 Form submission started');
+    console.log('📝 Form data:', formData);
+    
     if (!validateForm()) {
+      console.log('❌ Form validation failed');
       return;
     }
 
@@ -68,16 +91,48 @@ export default function RoomForm({ room, mode, onClose }: RoomFormProps) {
     setErrors({}); // Clear previous errors
 
     try {
+      let roomData: any = { ...formData };
+      
+      console.log('🏗️ Preparing room data:', roomData);
+      
+      // If there's an image, upload it first
+      if (roomImage) {
+        console.log('🖼️ Image upload required');
+        const formDataImage = new FormData();
+        formDataImage.append('image', roomImage);
+        formDataImage.append('roomNumber', formData.number);
+        
+        const imageResponse = await fetch('/api/rooms/image', {
+          method: 'POST',
+          body: formDataImage
+        });
+        
+        if (imageResponse.ok) {
+          const imageResult = await imageResponse.json();
+          roomData.imageUrl = imageResult.imageUrl;
+          console.log('✅ Image upload successful:', imageResult);
+        } else {
+          const errorData = await imageResponse.json();
+          console.log('❌ Image upload failed:', errorData);
+          setErrors({ submit: `Image upload failed: ${errorData.message}` });
+          return;
+        }
+      }
+
       const url = mode === 'create' ? '/api/rooms' : `/api/rooms/${room?.id}`;
       const method = mode === 'create' ? 'POST' : 'PUT';
+
+      console.log('🌐 Making API request:', { url, method, roomData });
 
       const response = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(roomData),
       });
+
+      console.log('📡 API response received:', { status: response.status, ok: response.ok });
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -111,44 +166,103 @@ export default function RoomForm({ room, mode, onClose }: RoomFormProps) {
   };
 
   const handleInputChange = (field: string, value: string | number) => {
-    let processedValue = value;
-    
-    // Handle numeric fields to prevent NaN
-    if (field === 'price' || field === 'capacity') {
-      if (typeof value === 'string') {
-        // If the input is empty, set to appropriate default
-        if (value === '') {
-          processedValue = field === 'price' ? 0 : 1;
-        } else {
-          // Parse the number and handle NaN
-          const parsed = field === 'price' ? parseFloat(value) : parseInt(value);
-          processedValue = isNaN(parsed) ? (field === 'price' ? 0 : 1) : parsed;
-        }
-      }
-    }
-    
-    setFormData(prev => ({ ...prev, [field]: processedValue }));
+    setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
   };
 
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setRoomImage(file);
+      setImageError('');
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeImage = () => {
+    setRoomImage(null);
+    setImagePreview('');
+    setImageError('');
+  };
+
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-gradient-to-br from-white to-gray-50 rounded-3xl p-6 w-full max-w-md mx-auto max-h-[90vh] flex flex-col shadow-2xl border border-gray-200/50">
-        <div className="flex justify-between items-center mb-6 flex-shrink-0">
-          <h2 className="text-xl font-bold text-gray-900">
+    <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{
+      background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.5) 0%, rgba(147, 51, 234, 0.5) 50%, rgba(79, 70, 229, 0.5) 100%)',
+      backdropFilter: 'blur(16px)',
+      WebkitBackdropFilter: 'blur(16px)',
+      backgroundColor: 'rgba(59, 130, 246, 0.3)'
+    }}>
+      <div className="bg-gradient-to-br from-white via-blue-50 to-indigo-50 rounded-3xl p-4 w-full max-w-md mx-auto max-h-[80vh] flex flex-col shadow-2xl border border-blue-200 backdrop-blur-sm">
+        <div className="flex justify-between items-center mb-4 flex-shrink-0">
+          <h2 className="text-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
             {mode === 'create' ? 'Create New Room' : 'Edit Room'}
           </h2>
           <button
             onClick={onClose}
-            className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors"
+            className="w-7 h-7 bg-gradient-to-br from-red-400 to-red-500 rounded-full flex items-center justify-center hover:from-red-500 hover:to-red-600 transition-all duration-200 shadow-sm"
           >
-            <span className="text-gray-500 font-bold">×</span>
+            <span className="text-white font-bold text-sm">×</span>
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex-1 space-y-6">
+        <form onSubmit={handleSubmit} className="flex-1 space-y-4 overflow-y-auto">
+          {/* Room Image Upload Section */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Room Image
+            </label>
+            <div className="space-y-2">
+              {/* Image Preview */}
+              {imagePreview && (
+                <div className="relative">
+                  <img
+                    src={imagePreview}
+                    alt="Room preview"
+                    className="w-full h-32 object-cover rounded-lg border-2 border-gray-200"
+                  />
+                  <button
+                    type="button"
+                    onClick={removeImage}
+                    className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
+              
+              {/* Upload Button */}
+              {!imagePreview && (
+                <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-blue-300 rounded-lg cursor-pointer bg-gradient-to-br from-blue-50/50 to-indigo-50/50 hover:from-blue-100/50 hover:to-indigo-100/50 transition-all duration-200">
+                  <div className="flex flex-col items-center justify-center">
+                    <Camera className="w-6 h-6 text-blue-500 mb-1" />
+                    <p className="text-xs text-blue-600 text-center">
+                      <span className="font-semibold">Click to upload</span><br/>or drag and drop
+                    </p>
+                    <p className="text-xs text-blue-500 mt-1">PNG, JPG, GIF up to 5MB</p>
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="hidden"
+                  />
+                </label>
+              )}
+              
+              {imageError && (
+                <p className="text-red-500 text-xs">{imageError}</p>
+              )}
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               Room Number *
@@ -157,7 +271,7 @@ export default function RoomForm({ room, mode, onClose }: RoomFormProps) {
               type="text"
               value={formData.number}
               onChange={(e) => handleInputChange('number', e.target.value)}
-              className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white shadow-sm ${
+              className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/80 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-200 ${
                 errors.number ? 'border-red-500' : 'border-gray-300'
               }`}
               placeholder="e.g., 101"
@@ -168,13 +282,14 @@ export default function RoomForm({ room, mode, onClose }: RoomFormProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-semibold text-gray-700 mb-1 flex items-center">
+              <Building className="w-4 h-4 mr-2 text-blue-500" />
               Room Type *
             </label>
             <select
               value={formData.type}
               onChange={(e) => handleInputChange('type', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/80 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-200"
             >
               {roomTypes.map(type => (
                 <option key={type} value={type}>
@@ -185,7 +300,8 @@ export default function RoomForm({ room, mode, onClose }: RoomFormProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-semibold text-gray-700 mb-1 flex items-center">
+              <Users className="w-4 h-4 mr-2 text-green-500" />
               Capacity *
             </label>
             <input
@@ -194,46 +310,48 @@ export default function RoomForm({ room, mode, onClose }: RoomFormProps) {
               max="10"
               value={formData.capacity}
               onChange={(e) => handleInputChange('capacity', e.target.value)}
-              className={`w-full px-3 py-2 border rounded-md ${
+              placeholder="Enter guest capacity"
+              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/80 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-200 ${
                 errors.capacity ? 'border-red-500' : 'border-gray-300'
-              } focus:outline-none focus:ring-2 focus:ring-blue-500`}
+              }`}
             />
             {errors.capacity && (
-              <p className="text-red-500 text-sm mt-1">{errors.capacity}</p>
+              <p className="text-red-500 text-xs mt-1">{errors.capacity}</p>
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-semibold text-gray-700 mb-1 flex items-center">
+              <DollarSign className="w-4 h-4 mr-2 text-yellow-500" />
               Price per Night *
             </label>
             <div className="relative">
-              <span className="absolute left-3 top-2 text-gray-500">$</span>
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">$</span>
               <input
                 type="number"
                 min="0"
                 step="0.01"
                 value={formData.price}
                 onChange={(e) => handleInputChange('price', e.target.value)}
-                className={`w-full pl-8 pr-3 py-2 border rounded-md ${
+                placeholder="Enter nightly rate"
+                className={`w-full pl-8 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/80 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-200 ${
                   errors.price ? 'border-red-500' : 'border-gray-300'
-                } focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                placeholder="0.00"
+                }`}
               />
             </div>
             {errors.price && (
-              <p className="text-red-500 text-sm mt-1">{errors.price}</p>
+              <p className="text-red-500 text-xs mt-1">{errors.price}</p>
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
               Status
             </label>
             <select
               value={formData.status}
               onChange={(e) => handleInputChange('status', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/80 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-200"
             >
               {roomStatuses.map(status => (
                 <option key={status} value={status}>
@@ -244,21 +362,25 @@ export default function RoomForm({ room, mode, onClose }: RoomFormProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-semibold text-gray-700 mb-1 flex items-center">
+              <FileText className="w-4 h-4 mr-2 text-purple-500" />
               Description
             </label>
             <textarea
               value={formData.description}
               onChange={(e) => handleInputChange('description', e.target.value)}
-              rows={3}
-              className={`w-full px-3 py-2 border rounded-md ${
+              rows={2}
+              placeholder="Describe the room's features, amenities, and unique characteristics..."
+              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/80 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-200 resize-none ${
                 errors.description ? 'border-red-500' : 'border-gray-300'
-              } focus:outline-none focus:ring-2 focus:ring-blue-500`}
-              placeholder="Room description..."
+              }`}
             />
             {errors.description && (
-              <p className="text-red-500 text-sm mt-1">{errors.description}</p>
+              <p className="text-red-500 text-xs mt-1">{errors.description}</p>
             )}
+            <p className="text-xs text-gray-500 mt-1">
+              {formData.description.length}/500 characters
+            </p>
           </div>
 
           {errors.submit && (
@@ -293,18 +415,18 @@ export default function RoomForm({ room, mode, onClose }: RoomFormProps) {
             </div>
           )}
 
-          <div className="flex space-x-3 pt-4">
+          <div className="flex space-x-3 pt-2">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-all duration-200 hover:shadow-md"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting || isSuccess}
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-3 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm transition-all duration-200 hover:shadow-lg shadow-md"
             >
               {isSubmitting ? 'Saving...' : isSuccess ? 'Success!' : mode === 'create' ? 'Create Room' : 'Update Room'}
             </button>

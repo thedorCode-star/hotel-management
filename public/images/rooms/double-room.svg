@@ -1,0 +1,56 @@
+<svg width="400" height="300" viewBox="0 0 400 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="wall2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fef3c7;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#fde68a;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="floor2" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#fef3c7;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f59e0b;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="bed2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ec4899;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#be185d;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="pillow2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#fce7f3;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="400" height="300" fill="url(#wall2)"/>
+  
+  <!-- Floor -->
+  <rect x="0" y="250" width="400" height="50" fill="url(#floor2)"/>
+  
+  <!-- Double Bed -->
+  <rect x="40" y="170" width="140" height="70" rx="10" fill="url(#bed2)"/>
+  <rect x="50" y="175" width="120" height="25" rx="6" fill="url(#pillow2)"/>
+  <rect x="50" y="205" width="120" height="25" rx="6" fill="url(#pillow2)"/>
+  
+  <!-- Bedside Tables -->
+  <rect x="200" y="190" width="35" height="50" fill="#8b5cf6"/>
+  <rect x="175" y="190" width="35" height="50" fill="#8b5cf6"/>
+  <circle cx="192" cy="215" r="6" fill="#fbbf24"/>
+  <circle cx="217" cy="215" r="6" fill="#fbbf24"/>
+  
+  <!-- Large Window -->
+  <rect x="270" y="70" width="90" height="70" fill="#87ceeb"/>
+  <rect x="275" y="75" width="80" height="60" fill="#ffffff"/>
+  <line x1="315" y1="75" x2="315" y2="135" stroke="#cbd5e1" stroke-width="2"/>
+  <line x1="275" y1="105" x2="355" y2="105" stroke="#cbd5e1" stroke-width="2"/>
+  
+  <!-- Armchair -->
+  <rect x="320" y="190" width="40" height="50" fill="#10b981"/>
+  <rect x="325" y="165" width="30" height="25" fill="#10b981"/>
+  
+  <!-- Decorative Elements -->
+  <circle cx="70" cy="90" r="18" fill="#f59e0b"/>
+  <circle cx="110" cy="90" r="14" fill="#ef4444"/>
+  <circle cx="150" cy="90" r="16" fill="#8b5cf6"/>
+  <circle cx="190" cy="90" r="12" fill="#10b981"/>
+  
+  <!-- Text -->
+  <text x="200" y="280" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#92400e">Double Room</text>
+</svg>

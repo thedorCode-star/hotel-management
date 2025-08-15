@@ -17,9 +17,13 @@ import {
   Home,
   Bed,
   Star,
-  Crown
+  Crown,
+  Shield,
+  AlertTriangle
 } from 'lucide-react';
 import RoomForm from './components/RoomForm';
+import { canCreateRooms, canEditRooms, canDeleteRooms, getRoleDisplayName, getRoleColor } from '../../../lib/permissions';
+import { getRoomImage } from '../../../lib/room-images';
 
 interface Room {
   id: string;
@@ -97,10 +101,29 @@ export default function RoomsPage() {
     search: '',
   });
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  
+  // Authentication state
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
+  
+  // User role state - will be set from authentication
+  const [userRole, setUserRole] = useState<'ADMIN' | 'MANAGER' | 'STAFF' | 'CONCIERGE' | 'GUEST'>('STAFF');
+  
+  // Check permissions
+  const canCreate = canCreateRooms(userRole);
+  const canEdit = canEditRooms(userRole);
+  const canDelete = canDeleteRooms(userRole);
+
+  // Check authentication on component mount
+  useEffect(() => {
+    checkAuthentication();
+  }, []);
 
   useEffect(() => {
-    fetchRooms();
-  }, []);
+    if (isAuthenticated) {
+      fetchRooms();
+    }
+  }, [isAuthenticated]);
 
   useEffect(() => {
     applyFilters();
@@ -121,6 +144,52 @@ export default function RoomsPage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const checkAuthentication = async () => {
+    try {
+      // Check for auth token in cookies or localStorage
+      const token = localStorage.getItem('token') || getCookie('auth-token');
+      
+      if (!token) {
+        console.log('❌ No auth token found, redirecting to login');
+        router.push('/auth/login');
+        return;
+      }
+
+      // Get user info from the backend
+      const response = await fetch('/api/auth/me', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const actualUserRole = data.user?.role || 'STAFF';
+        
+        console.log('✅ User authenticated with role:', actualUserRole);
+        
+        // Set the actual user role from authentication
+        setUserRole(actualUserRole as 'ADMIN' | 'MANAGER' | 'STAFF' | 'CONCIERGE' | 'GUEST');
+        setIsAuthenticated(true);
+        setAuthLoading(false);
+      } else {
+        console.log('❌ Failed to get user info, redirecting to login');
+        router.push('/auth/login');
+      }
+    } catch (error) {
+      console.error('Authentication check failed:', error);
+      router.push('/auth/login');
+    }
+  };
+
+  // Helper function to get cookie value
+  const getCookie = (name: string): string | null => {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop()?.split(';').shift() || null;
+    return null;
   };
 
   const applyFilters = () => {
@@ -222,6 +291,25 @@ export default function RoomsPage() {
     totalRevenue: rooms.reduce((sum, r) => sum + r.price, 0)
   };
 
+  // Show loading while checking authentication
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 sm:p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center py-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Checking authentication...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Redirect if not authenticated
+  if (!isAuthenticated) {
+    return null; // Component will unmount and redirect
+  }
+
   if (isLoading) {
     return <LoadingSkeleton />;
   }
@@ -247,15 +335,76 @@ export default function RoomsPage() {
                   <div className="text-sm text-blue-600 font-medium">Total Rooms</div>
                 </div>
               </div>
-              <button
-                onClick={() => setShowForm(true)}
-                className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-3 rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center font-semibold"
-              >
-                <Plus className="h-5 w-5 mr-2" />
-                Add New Room
-              </button>
+              
+                          {/* Role Selector for Testing - Only visible to Admin/Manager */}
+            {canCreate && (
+              <div className="flex items-center space-x-3 bg-white rounded-xl p-3 shadow-sm border border-gray-200">
+                <Shield className="w-5 h-5 text-gray-600" />
+                <div className="text-sm font-medium text-gray-700">
+                  Current Role: <span className="font-bold text-blue-600">{getRoleDisplayName(userRole)}</span>
+                </div>
+                {/* Keep dropdown for testing - remove in production */}
+                <select
+                  value={userRole}
+                  onChange={(e) => setUserRole(e.target.value as any)}
+                  className="text-sm font-medium text-gray-700 bg-transparent border-none focus:ring-0 focus:outline-none"
+                >
+                  <option value="ADMIN">Administrator</option>
+                  <option value="MANAGER">Manager</option>
+                  <option value="STAFF">Staff</option>
+                  <option value="CONCIERGE">Concierge</option>
+                  <option value="GUEST">Guest</option>
+                </select>
+              </div>
+            )}
+              
+              {canCreate && (
+                <button
+                  onClick={() => setShowForm(true)}
+                  className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-3 rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center font-semibold"
+                >
+                  <Plus className="h-5 w-5 mr-2" />
+                  Add New Room
+                </button>
+              )}
             </div>
           </div>
+          
+          {/* Permission Status */}
+          <div className="flex flex-wrap items-center gap-3 mt-4">
+            <div className={`px-3 py-1 rounded-full text-sm font-medium border ${getRoleColor(userRole)}`}>
+              {getRoleDisplayName(userRole)}
+            </div>
+            <div className="flex items-center space-x-4 text-sm text-gray-600">
+              <span className={`flex items-center ${canCreate ? 'text-green-600' : 'text-red-600'}`}>
+                {canCreate ? '✓' : '✗'} Create Rooms
+              </span>
+              <span className={`flex items-center ${canEdit ? 'text-green-600' : 'text-red-600'}`}>
+                {canEdit ? '✓' : '✗'} Edit Rooms
+              </span>
+              <span className={`flex items-center ${canDelete ? 'text-green-600' : 'text-red-600'}`}>
+                {canDelete ? '✓' : '✗'} Delete Rooms
+              </span>
+            </div>
+          </div>
+          
+          {/* Permission Warning */}
+          {!canCreate && (
+            <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
+              <div className="flex items-center space-x-3">
+                <AlertTriangle className="w-5 h-5 text-yellow-600" />
+                <div>
+                  <h3 className="text-sm font-medium text-yellow-800">
+                    Limited Room Management Access
+                  </h3>
+                  <p className="text-sm text-yellow-700 mt-1">
+                    As a {getRoleDisplayName(userRole).toLowerCase()}, you can view rooms but cannot create, edit, or delete them. 
+                    Contact an administrator or manager for room management tasks.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Statistics Cards */}
@@ -475,6 +624,20 @@ export default function RoomsPage() {
                       className="bg-gradient-to-br from-white to-gray-50 border border-gray-200/60 rounded-2xl p-6 shadow-lg shadow-gray-200/50 backdrop-blur-sm hover:shadow-xl hover:scale-105 transition-all duration-200 group"
                       style={{animationDelay: `${index * 0.05}s`}}
                     >
+                      {/* Room Image */}
+                      <div className="mb-4 relative overflow-hidden rounded-xl">
+                        <img
+                          src={getRoomImage(room.type).url}
+                          alt={getRoomImage(room.type).alt}
+                          className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-300"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = '/images/rooms/default-room.svg';
+                          }}
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      </div>
+
                       {/* Header Section */}
                       <div className="flex justify-between items-start mb-4">
                         <div className="flex items-center space-x-3">
@@ -494,6 +657,15 @@ export default function RoomsPage() {
                               <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium shadow-sm ${getTypeColor(room.type)}`}>
                                 {room.type}
                               </span>
+                              <img
+                                src={getRoomImage(room.type).url}
+                                alt={room.type}
+                                className="w-4 h-4 rounded object-cover"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.src = '/images/rooms/default-room.svg';
+                                }}
+                              />
                             </div>
                           </div>
                         </div>
@@ -533,22 +705,36 @@ export default function RoomsPage() {
 
                       {/* Action Buttons */}
                       <div className="flex space-x-2">
-                        <button
-                          onClick={() => {
-                            setEditingRoom(room);
-                            setShowForm(true);
-                          }}
-                          className="flex-1 px-4 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm rounded-xl hover:shadow-lg hover:scale-105 transition-all duration-200 flex items-center justify-center font-semibold"
-                        >
-                          <Edit className="h-4 w-4 mr-2" />
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDeleteRoom(room.id)}
-                          className="px-4 py-2.5 bg-gradient-to-r from-red-500 to-red-600 text-white text-sm rounded-xl hover:shadow-lg hover:scale-105 transition-all duration-200 flex items-center justify-center font-semibold"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        {canEdit ? (
+                          <button
+                            onClick={() => {
+                              setEditingRoom(room);
+                              setShowForm(true);
+                            }}
+                            className="flex-1 px-4 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm rounded-xl hover:shadow-lg hover:scale-105 transition-all duration-200 flex items-center justify-center font-semibold"
+                          >
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit
+                          </button>
+                        ) : (
+                          <div className="flex-1 px-4 py-2.5 bg-gray-300 text-gray-500 text-sm rounded-xl flex items-center justify-center font-semibold cursor-not-allowed">
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit
+                          </div>
+                        )}
+                        
+                        {canDelete ? (
+                          <button
+                            onClick={() => handleDeleteRoom(room.id)}
+                            className="px-4 py-2.5 bg-gradient-to-r from-red-500 to-red-600 text-white text-sm rounded-xl hover:shadow-lg hover:scale-105 transition-all duration-200 flex items-center justify-center font-semibold"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        ) : (
+                          <div className="px-4 py-2.5 bg-gray-300 text-gray-500 text-sm rounded-xl flex items-center justify-center font-semibold cursor-not-allowed">
+                            <Trash2 className="h-4 w-4" />
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}

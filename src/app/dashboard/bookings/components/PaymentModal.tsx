@@ -65,7 +65,12 @@ function StripePaymentForm({ booking, onPaymentSuccess, onClose }: {
     setError(null);
 
     try {
+      console.log('🔍 Starting payment process...');
+      console.log('🔑 Auth token present:', !!token);
+      console.log('💳 Stripe elements available:', !!elements);
+      
       // Create payment method
+      console.log('🔄 Creating Stripe payment method...');
       const { error: paymentMethodError, paymentMethod } = await stripe.createPaymentMethod({
         type: 'card',
         card: elements.getElement(CardElement)!,
@@ -74,6 +79,8 @@ function StripePaymentForm({ booking, onPaymentSuccess, onClose }: {
           email: booking.user.email,
         },
       });
+      
+      console.log('✅ Payment method created:', paymentMethod?.id);
 
       if (paymentMethodError) {
         setError(paymentMethodError.message || 'Payment method creation failed');
@@ -81,32 +88,47 @@ function StripePaymentForm({ booking, onPaymentSuccess, onClose }: {
         return;
       }
 
-      // Process payment through our API
-      const response = await fetch('/api/payments/process', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          bookingId: booking.id,
-          amount: booking.totalPrice,
-          paymentMethod: 'stripe',
-          paymentMethodId: paymentMethod.id,
-          customerEmail: booking.user.email,
-          customerName: booking.user.name,
-        }),
-      });
+      // Process payment through our API with timeout
+      console.log('🌐 Making API call to /api/payments/process...');
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
-      const data = await response.json();
+      try {
+        const response = await fetch('/api/payments/process', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            bookingId: booking.id,
+            amount: booking.totalPrice,
+            paymentMethod: 'stripe',
+            paymentMethodId: paymentMethod.id,
+            customerEmail: booking.user.email,
+            customerName: booking.user.name,
+          }),
+          signal: controller.signal,
+        });
 
-      if (response.ok) {
-        if (data.requiresAction) {
-          // Handle 3D Secure authentication
-          const { error: confirmError } = await stripe.confirmCardPayment(data.clientSecret);
-          
-          if (confirmError) {
-            setError(confirmError.message || 'Payment confirmation failed');
+        clearTimeout(timeoutId);
+
+        const data = await response.json();
+
+        if (response.ok) {
+          if (data.requiresAction) {
+            // Handle 3D Secure authentication
+            const { error: confirmError } = await stripe.confirmCardPayment(data.clientSecret);
+            
+            if (confirmError) {
+              setError(confirmError.message || 'Payment confirmation failed');
+            } else {
+              setSuccess(true);
+              setTimeout(() => {
+                onPaymentSuccess();
+                onClose();
+              }, 2000);
+            }
           } else {
             setSuccess(true);
             setTimeout(() => {
@@ -115,18 +137,22 @@ function StripePaymentForm({ booking, onPaymentSuccess, onClose }: {
             }, 2000);
           }
         } else {
-          setSuccess(true);
-          setTimeout(() => {
-            onPaymentSuccess();
-            onClose();
-          }, 2000);
+          if (response.status === 401) {
+            setError('Authentication expired. Please log in again.');
+          } else {
+            setError(data.error || 'Payment processing failed');
+          }
         }
-      } else {
-        if (response.status === 401) {
-          setError('Authentication expired. Please log in again.');
+      } catch (fetchError: any) {
+        clearTimeout(timeoutId);
+        if (fetchError.name === 'AbortError') {
+          setError('Payment request timed out. Please try again.');
         } else {
-          setError(data.error || 'Payment processing failed');
+          console.error('Payment fetch error:', fetchError);
+          setError('Network error. Please check your connection and try again.');
         }
+      } finally {
+        setIsProcessing(false);
       }
     } catch (error) {
       console.error('Payment error:', error);
@@ -215,6 +241,10 @@ function StripePaymentForm({ booking, onPaymentSuccess, onClose }: {
 
 export default function PaymentModal({ isOpen, onClose, booking, onPaymentSuccess }: PaymentModalProps) {
   const { isStripeAvailable } = useStripeContext();
+  
+  console.log('🎯 PaymentModal: Component rendered');
+  console.log('🎯 PaymentModal: isStripeAvailable:', isStripeAvailable);
+  console.log('🎯 PaymentModal: isOpen:', isOpen);
 
   if (!isOpen) return null;
 

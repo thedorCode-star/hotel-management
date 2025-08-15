@@ -79,12 +79,35 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { name, email, role, isActive, phone, address } = body;
+    const { 
+      name, 
+      email, 
+      role, 
+      isActive, 
+      phone, 
+      address, 
+      city, 
+      country, 
+      postalCode, 
+      dateOfBirth, 
+      emergencyContact, 
+      preferences, 
+      avatar,
+      password: newPassword 
+    } = body;
 
     // Validate required fields
     if (!name || !email || !role) {
       return NextResponse.json(
         { message: 'Name, email, and role are required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate password if provided
+    if (newPassword && newPassword.length < 6) {
+      return NextResponse.json(
+        { message: 'Password must be at least 6 characters long' },
         { status: 400 }
       );
     }
@@ -104,34 +127,89 @@ export async function PUT(
       );
     }
 
+    // Prepare update data
+    const updateData: any = {
+      name,
+      email,
+      role,
+      isActive: isActive !== undefined ? isActive : true,
+    };
+
+    // Hash password if provided
+    if (newPassword) {
+      const hashedPassword = await bcrypt.hash(newPassword, 12);
+      updateData.password = hashedPassword;
+    }
+
     // Update user
     const updatedUser = await prisma.user.update({
       where: { id: userId },
-      data: {
-        name,
-        email,
-        role,
-        isActive: isActive !== undefined ? isActive : true,
-        profile: {
-          upsert: {
-            create: {
-              phone: phone || null,
-              address: address || null,
-            },
-            update: {
-              phone: phone || null,
-              address: address || null,
-            }
-          }
-        }
-      },
+      data: updateData,
       include: {
         profile: true
       }
     });
 
+    // Update or create profile
+    console.log('🔄 Updating user profile with data:', {
+      userId,
+      phone,
+      address,
+      city,
+      country,
+      postalCode,
+      dateOfBirth,
+      emergencyContact,
+      preferences,
+      avatar
+    });
+
+    const profileResult = await prisma.userProfile.upsert({
+      where: { userId },
+      create: {
+        userId,
+        phone: phone || null,
+        address: address || null,
+        city: city || null,
+        country: country || null,
+        postalCode: postalCode || null,
+        dateOfBirth: dateOfBirth || null,
+        emergencyContact: emergencyContact || null,
+        preferences: preferences || null,
+        avatar: avatar || null,
+      },
+      update: {
+        phone: phone || null,
+        address: address || null,
+        city: city || null,
+        country: country || null,
+        postalCode: postalCode || null,
+        dateOfBirth: dateOfBirth || null,
+        emergencyContact: emergencyContact || null,
+        preferences: preferences || null,
+        avatar: avatar || null,
+      }
+    });
+
+    console.log('✅ Profile updated successfully:', profileResult);
+
+    // Fetch the updated user with profile
+    const finalUser = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        profile: true
+      }
+    });
+
+    if (!finalUser) {
+      return NextResponse.json(
+        { message: 'Failed to fetch updated user' },
+        { status: 500 }
+      );
+    }
+
     // Remove sensitive information
-    const { password, ...safeUser } = updatedUser;
+    const { password, ...safeUser } = finalUser;
 
     return NextResponse.json({
       message: 'User updated successfully',

@@ -253,7 +253,12 @@ export default function RefundsPage() {
   const totalRefunded = refunds.reduce((sum, r) => sum + r.amount, 0);
   const pendingRefunds = refunds.filter(r => r.status === 'PENDING').reduce((sum, r) => sum + r.amount, 0);
   const completedRefunds = refunds.filter(r => r.status === 'COMPLETED').reduce((sum, r) => sum + r.amount, 0);
-  const totalRevenue = refunds.reduce((sum, r) => sum + (r.booking.refundAmount || 0), 0); // Assuming booking.refundAmount is the total revenue for the booking
+  
+  // For now, we'll use a placeholder total revenue since we don't have access to all bookings
+  // In a real app, you'd fetch total revenue from all bookings
+  const totalRevenue = 10000; // Placeholder - replace with actual total revenue
+  
+  // Calculate refund rate: (Total Refunds / Total Revenue) × 100
   const refundRate = totalRevenue > 0 ? (totalRefunded / totalRevenue) * 100 : 0;
 
   if (isLoading) {

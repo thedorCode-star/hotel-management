@@ -1,0 +1,58 @@
+<svg width="400" height="300" viewBox="0 0 400 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="wall4" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fefce8;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#fef3c7;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="floor4" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#fefce8;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#fbbf24;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="bed4" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f59e0b;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#d97706;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="pillow4" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#fefce8;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="400" height="300" fill="url(#wall4)"/>
+  
+  <!-- Floor -->
+  <rect x="0" y="250" width="400" height="50" fill="url(#floor4)"/>
+  
+  <!-- Premium Bed -->
+  <rect x="25" y="150" width="160" height="90" rx="15" fill="url(#bed4)"/>
+  <rect x="35" y="155" width="140" height="35" rx="10" fill="url(#pillow4)"/>
+  <rect x="35" y="195" width="140" height="35" rx="10" fill="url(#pillow4)"/>
+  
+  <!-- Luxury Furniture -->
+  <rect x="200" y="110" width="90" height="70" fill="#8b5cf6"/>
+  <rect x="210" y="120" width="70" height="50" fill="#ffffff"/>
+  
+  <!-- Premium Sofa -->
+  <rect x="200" y="190" width="90" height="50" fill="#10b981"/>
+  <rect x="210" y="195" width="70" height="40" fill="#d1fae5"/>
+  
+  <!-- Elegant Table -->
+  <rect x="220" y="210" width="50" height="25" fill="#f59e0b"/>
+  
+  <!-- Panoramic Window -->
+  <rect x="310" y="50" width="70" height="90" fill="#87ceeb"/>
+  <rect x="315" y="55" width="60" height="80" fill="#ffffff"/>
+  <line x1="345" y1="55" x2="345" y2="135" stroke="#cbd5e1" stroke-width="2"/>
+  <line x1="315" y1="95" x2="375" y2="95" stroke="#cbd5e1" stroke-width="2"/>
+  
+  <!-- Decorative Elements -->
+  <circle cx="50" cy="70" r="22" fill="#fbbf24"/>
+  <circle cx="90" cy="70" r="18" fill="#ef4444"/>
+  <circle cx="130" cy="70" r="20" fill="#10b981"/>
+  <circle cx="170" cy="70" r="16" fill="#8b5cf6"/>
+  <circle cx="210" cy="70" r="14" fill="#f59e0b"/>
+  
+  <!-- Text -->
+  <text x="200" y="280" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#92400e">Deluxe Room</text>
+</svg>

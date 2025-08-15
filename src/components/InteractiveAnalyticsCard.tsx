@@ -136,26 +136,30 @@ export default function InteractiveAnalyticsCard({
 
       {/* Expanded Modal */}
       {isExpanded && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{
+          background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.3) 0%, rgba(147, 51, 234, 0.3) 50%, rgba(79, 70, 229, 0.3) 100%)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)'
+        }}>
+          <div className="bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/30 rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-blue-200/50 backdrop-blur-sm">
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+            <div className="flex items-center justify-between p-6 border-b border-blue-200/50 bg-gradient-to-r from-blue-50/50 to-indigo-50/50">
               <div className="flex items-center space-x-3">
-                <div className={`w-12 h-12 rounded-xl ${bgColor} flex items-center justify-center`}>
+                <div className={`w-12 h-12 rounded-xl ${bgColor} flex items-center justify-center shadow-lg`}>
                   {icon}
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
-                  <p className="text-gray-600">{subtitle}</p>
+                  <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">{title}</h2>
+                  <p className="text-blue-700 font-medium">{subtitle}</p>
                 </div>
               </div>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setIsExpanded(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="w-10 h-10 rounded-full bg-gradient-to-br from-red-400 to-red-500 hover:from-red-500 hover:to-red-600 text-white hover:text-white transition-all duration-200 shadow-md"
               >
-                <X className="h-6 w-6" />
+                <X className="h-5 w-5" />
               </Button>
             </div>
 
@@ -163,8 +167,8 @@ export default function InteractiveAnalyticsCard({
             <div className="p-6 space-y-6">
               {/* Key Metrics */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="text-center p-4 bg-gray-50 rounded-lg">
-                  <div className="text-3xl font-bold text-gray-900 mb-1">
+                <div className="text-center p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-200/50 shadow-sm hover:shadow-md transition-all duration-200">
+                  <div className="text-3xl font-bold text-blue-700 mb-2">
                     {typeof value === 'number' && value >= 1000 
                       ? `$${(value / 1000).toFixed(1)}K` 
                       : typeof value === 'number' 
@@ -172,38 +176,38 @@ export default function InteractiveAnalyticsCard({
                         : value
                     }
                   </div>
-                  <div className="text-sm text-gray-600">Current Value</div>
+                  <div className="text-sm text-blue-600 font-medium">Current Value</div>
                 </div>
                 {trend && (
-                  <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <div className={`text-3xl font-bold mb-1 ${trend.isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                  <div className="text-center p-6 bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl border border-green-200/50 shadow-sm hover:shadow-md transition-all duration-200">
+                    <div className={`text-3xl font-bold mb-2 ${trend.isPositive ? 'text-green-600' : 'text-red-600'}`}>
                       {trend.isPositive ? '+' : ''}{trend.value}%
                     </div>
-                    <div className="text-sm text-gray-600">{trend.period}</div>
+                    <div className="text-sm text-green-600 font-medium">{trend.period}</div>
                   </div>
                 )}
-                <div className="text-center p-4 bg-gray-50 rounded-lg">
-                  <div className="text-3xl font-bold text-blue-600 mb-1">
+                <div className="text-center p-6 bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl border border-purple-200/50 shadow-sm hover:shadow-md transition-all duration-200">
+                  <div className="text-3xl font-bold text-purple-600 mb-2">
                     <BarChart3 className="h-8 w-8 mx-auto" />
                   </div>
-                  <div className="text-sm text-gray-600">Analytics</div>
+                  <div className="text-sm text-purple-600 font-medium">Analytics</div>
                 </div>
               </div>
 
               {/* Breakdown Analysis */}
               {details?.breakdown && (
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                    <PieChart className="h-5 w-5 mr-2" />
+                <div className="bg-gradient-to-br from-blue-50/50 to-indigo-50/50 rounded-2xl p-6 border border-blue-200/50 shadow-sm">
+                  <h3 className="text-lg font-semibold text-blue-900 mb-4 flex items-center">
+                    <PieChart className="h-5 w-5 mr-2 text-blue-600" />
                     Breakdown Analysis
                   </h3>
                   <div className="space-y-3">
                     {details.breakdown.map((item, index) => (
-                      <div key={index} className="flex items-center justify-between">
-                        <span className="text-sm text-gray-700">{item.label}</span>
+                      <div key={index} className="flex items-center justify-between p-3 bg-white/70 rounded-xl border border-blue-100/50 hover:bg-white/90 transition-all duration-200">
+                        <span className="text-sm text-blue-800 font-medium">{item.label}</span>
                         <div className="flex items-center space-x-3">
-                          <span className="text-sm font-medium text-gray-900">{item.value}</span>
-                          <Badge variant="secondary" className="text-xs">
+                          <span className="text-sm font-bold text-blue-900">{item.value}</span>
+                          <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700 border-blue-200">
                             {item.percentage}%
                           </Badge>
                         </div>
@@ -215,17 +219,17 @@ export default function InteractiveAnalyticsCard({
 
               {/* Key Performance Metrics */}
               {details?.metrics && (
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                    <Target className="h-5 w-5 mr-2" />
+                <div className="bg-gradient-to-br from-green-50/50 to-emerald-50/50 rounded-2xl p-6 border border-green-200/50 shadow-sm">
+                  <h3 className="text-lg font-semibold text-green-900 mb-4 flex items-center">
+                    <Target className="h-5 w-5 mr-2 text-green-600" />
                     Key Performance Metrics
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {details.metrics.map((metric, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg">
-                        <span className="text-sm text-gray-700">{metric.label}</span>
+                      <div key={index} className="flex items-center justify-between p-3 bg-white/70 rounded-xl border border-green-100/50 hover:bg-white/90 transition-all duration-200">
+                        <span className="text-sm text-green-800 font-medium">{metric.label}</span>
                         <div className="flex items-center space-x-2">
-                          <span className="text-sm font-medium text-gray-900">{metric.value}</span>
+                          <span className="text-sm font-bold text-green-900">{metric.value}</span>
                           <Badge className={`text-xs ${getStatusColor(metric.status)}`}>
                             {getStatusIcon(metric.status)}
                           </Badge>
@@ -238,16 +242,16 @@ export default function InteractiveAnalyticsCard({
 
               {/* Financial Insights */}
               {details?.insights && (
-                <div className="bg-blue-50 rounded-lg p-4">
-                  <h3 className="text-lg font-semibold text-blue-900 mb-4 flex items-center">
-                    <TrendingUp className="h-5 w-5 mr-2" />
+                <div className="bg-gradient-to-br from-indigo-50/50 to-purple-50/50 rounded-2xl p-6 border border-indigo-200/50 shadow-sm">
+                  <h3 className="text-lg font-semibold text-indigo-900 mb-4 flex items-center">
+                    <TrendingUp className="h-5 w-5 mr-2 text-indigo-600" />
                     Financial Insights
                   </h3>
-                  <ul className="space-y-2">
+                  <ul className="space-y-3">
                     {details.insights.map((insight, index) => (
-                      <li key={index} className="flex items-start space-x-2">
-                        <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
-                        <span className="text-sm text-blue-800">{insight}</span>
+                      <li key={index} className="flex items-start space-x-3 p-3 bg-white/70 rounded-xl border border-indigo-100/50 hover:bg-white/90 transition-all duration-200">
+                        <div className="w-2 h-2 bg-indigo-500 rounded-full mt-2 flex-shrink-0"></div>
+                        <span className="text-sm text-indigo-800 font-medium">{insight}</span>
                       </li>
                     ))}
                   </ul>
@@ -256,16 +260,16 @@ export default function InteractiveAnalyticsCard({
 
               {/* Auditor Recommendations */}
               {details?.recommendations && (
-                <div className="bg-green-50 rounded-lg p-4">
-                  <h3 className="text-lg font-semibold text-green-900 mb-4 flex items-center">
-                    <AlertTriangle className="h-5 w-5 mr-2" />
+                <div className="bg-gradient-to-br from-emerald-50/50 to-teal-50/50 rounded-2xl p-6 border border-emerald-200/50 shadow-sm">
+                  <h3 className="text-lg font-semibold text-emerald-900 mb-4 flex items-center">
+                    <AlertTriangle className="h-5 w-5 mr-2 text-emerald-600" />
                     Auditor Recommendations
                   </h3>
-                  <ul className="space-y-2">
+                  <ul className="space-y-3">
                     {details.recommendations.map((recommendation, index) => (
-                      <li key={index} className="flex items-start space-x-2">
-                        <div className="w-2 h-2 bg-green-400 rounded-full mt-2 flex-shrink-0"></div>
-                        <span className="text-sm text-green-800">{recommendation}</span>
+                      <li key={index} className="flex items-start space-x-3 p-3 bg-white/70 rounded-xl border border-emerald-100/50 hover:bg-white/90 transition-all duration-200">
+                        <div className="w-2 h-2 bg-emerald-500 rounded-full mt-2 flex-shrink-0"></div>
+                        <span className="text-sm text-emerald-800 font-medium">{recommendation}</span>
                       </li>
                     ))}
                   </ul>
@@ -274,13 +278,13 @@ export default function InteractiveAnalyticsCard({
             </div>
 
             {/* Modal Footer */}
-            <div className="flex items-center justify-between p-6 border-t border-gray-200">
-              <div className="text-sm text-gray-500">
+            <div className="flex items-center justify-between p-6 border-t border-blue-200/50 bg-gradient-to-r from-blue-50/30 to-indigo-50/30">
+              <div className="text-sm text-blue-600 font-medium">
                 Click outside to close • Data refreshes automatically
               </div>
               <Button
                 onClick={() => setIsExpanded(false)}
-                className="bg-gray-600 hover:bg-gray-700"
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-md hover:shadow-lg transition-all duration-200"
               >
                 Close
               </Button>

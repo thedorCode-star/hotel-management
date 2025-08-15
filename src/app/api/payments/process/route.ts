@@ -5,10 +5,15 @@ import { sendPaymentConfirmation } from '../../../../lib/email';
 import * as jwt from 'jsonwebtoken';
 
 export async function POST(request: NextRequest) {
+  console.log('🔐 PAYMENT PROCESSING STARTED');
+  const startTime = Date.now();
+  
   try {
     const db = getBuildSafeDatabase();
     const body = await request.json();
     const { bookingId, amount, paymentMethod, paymentMethodId, customerEmail, customerName } = body;
+    
+    console.log('📋 Payment request data:', { bookingId, amount, paymentMethod, customerEmail, customerName });
 
     // Validate required fields
     if (!bookingId || !amount || !customerEmail || !customerName) {
@@ -104,74 +109,94 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-      // Create or get Stripe customer
-      let customer;
-      const existingCustomers = await stripe.customers.list({
-        email: customerEmail,
-        limit: 1,
-      });
+          console.log('👤 Creating/getting Stripe customer...');
+    
+    // Create or get Stripe customer
+    let customer;
+    const existingCustomers = await stripe.customers.list({
+      email: customerEmail,
+      limit: 1,
+    });
 
-      if (existingCustomers.data.length > 0) {
-        customer = existingCustomers.data[0];
-      } else {
-        customer = await stripe.customers.create(createCustomerOptions(customerEmail, customerName));
-      }
+    if (existingCustomers.data.length > 0) {
+      customer = existingCustomers.data[0];
+      console.log('✅ Found existing customer:', customer.id);
+    } else {
+      customer = await stripe.customers.create(createCustomerOptions(customerEmail, customerName));
+      console.log('✅ Created new customer:', customer.id);
+    }
 
-      // Create payment intent with Stripe
-      const paymentIntentOptions = createPaymentIntentOptions(amount, {
-        bookingId,
-        userId,
-        roomNumber: (booking as any).room.number,
-        roomType: (booking as any).room.type,
-        checkIn: (booking as any).checkIn,
-        checkOut: (booking as any).checkOut,
-      });
+          console.log('💳 Creating Stripe payment intent...');
+    
+    // Create payment intent with Stripe
+    const paymentIntentOptions = createPaymentIntentOptions(amount, {
+      bookingId,
+      userId,
+      roomNumber: (booking as any).room.number,
+      roomType: (booking as any).room.type,
+      checkIn: (booking as any).checkIn,
+      checkOut: (booking as any).checkOut,
+    });
 
-      // Add customer to payment intent options
-      const paymentIntentWithCustomer = {
-        ...paymentIntentOptions,
-        customer: customer.id,
-      };
+    // Add customer to payment intent options
+    const paymentIntentWithCustomer = {
+      ...paymentIntentOptions,
+      customer: customer.id,
+    };
 
-      const paymentIntent = await stripe.paymentIntents.create(paymentIntentWithCustomer);
+    const paymentIntent = await stripe.paymentIntents.create(paymentIntentWithCustomer);
+    console.log('✅ Payment intent created:', paymentIntent.id, 'Status:', paymentIntent.status);
 
-      // If payment method ID is provided, confirm the payment
-      let paymentStatus = 'PENDING';
-      let transactionId = paymentIntent.id;
+          // If payment method ID is provided, confirm the payment
+    let paymentStatus = 'PENDING';
+    let transactionId = paymentIntent.id;
 
-      if (paymentMethodId) {
+    if (paymentMethodId) {
+      console.log('🔐 Confirming payment with payment method:', paymentMethodId);
+      
+      try {
+        // Attach payment method to customer if not already attached
         try {
-          // Attach payment method to customer if not already attached
-          try {
-            await stripe.paymentMethods.attach(paymentMethodId, {
-              customer: customer.id,
-            });
-          } catch (attachError: any) {
-            // Payment method might already be attached, that's okay
-            if (attachError.code !== 'resource_missing') {
-              throw attachError;
-            }
-          }
-
-          // Confirm the payment intent
-          const confirmedPaymentIntent = await stripe.paymentIntents.confirm(paymentIntent.id, {
-            payment_method: paymentMethodId,
-            return_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/dashboard/bookings`,
+          await stripe.paymentMethods.attach(paymentMethodId, {
+            customer: customer.id,
           });
-
-          if (confirmedPaymentIntent.status === 'succeeded') {
-            paymentStatus = 'COMPLETED';
-          } else if (confirmedPaymentIntent.status === 'requires_action') {
-            // Handle 3D Secure or other authentication
-            return NextResponse.json({
-              success: true,
-              requiresAction: true,
-              clientSecret: confirmedPaymentIntent.client_secret,
-              paymentIntentId: confirmedPaymentIntent.id,
-            });
+          console.log('✅ Payment method attached to customer');
+        } catch (attachError: any) {
+          // Payment method might already be attached, that's okay
+          if (attachError.code !== 'resource_missing') {
+            console.log('⚠️ Payment method attachment warning:', attachError.message);
+            throw attachError;
           } else {
-            paymentStatus = 'FAILED';
+            console.log('ℹ️ Payment method already attached');
           }
+        }
+
+                  console.log('🔄 Confirming payment intent...');
+        
+        // Confirm the payment intent
+        const confirmedPaymentIntent = await stripe.paymentIntents.confirm(paymentIntent.id, {
+          payment_method: paymentMethodId,
+          return_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/dashboard/bookings`,
+        });
+
+        console.log('✅ Payment intent confirmed. Status:', confirmedPaymentIntent.status);
+
+        if (confirmedPaymentIntent.status === 'succeeded') {
+          paymentStatus = 'COMPLETED';
+          console.log('🎉 Payment completed successfully!');
+        } else if (confirmedPaymentIntent.status === 'requires_action') {
+          console.log('🔐 Payment requires additional action (3D Secure)');
+          // Handle 3D Secure or other authentication
+          return NextResponse.json({
+            success: true,
+            requiresAction: true,
+            clientSecret: confirmedPaymentIntent.client_secret,
+            paymentIntentId: confirmedPaymentIntent.id,
+          });
+        } else {
+          paymentStatus = 'FAILED';
+          console.log('❌ Payment failed. Status:', confirmedPaymentIntent.status);
+        }
         } catch (error) {
           const stripeError = handleStripeError(error);
           return NextResponse.json(
@@ -181,6 +206,8 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      console.log('💾 Creating payment record in database...');
+      
       // Create payment record in database
       const payment = await db.payment.create({
         data: {
@@ -200,6 +227,8 @@ export async function POST(request: NextRequest) {
           }
         }
       });
+      
+      console.log('✅ Payment record created:', payment.id);
 
       // Update booking status if payment is successful
       if (paymentStatus === 'COMPLETED') {
@@ -244,6 +273,9 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      const processingTime = Date.now() - startTime;
+      console.log(`⏱️ Payment processing completed in ${processingTime}ms`);
+      
       return NextResponse.json({
         success: true,
         payment: {
@@ -262,7 +294,9 @@ export async function POST(request: NextRequest) {
             user: (payment as any).booking.user,
             room: (payment as any).booking.room
           }
-        }
+        },
+        processingTime: `${processingTime}ms`,
+        message: 'Payment processed successfully'
       });
 
     } catch (stripeError) {

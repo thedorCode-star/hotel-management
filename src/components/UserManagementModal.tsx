@@ -1,492 +1,636 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { 
   User, 
   Mail, 
-  Phone, 
-  MapPin, 
-  Clock, 
-  Edit, 
-  Trash2, 
-  Save, 
+  Lock, 
+  Camera, 
   X, 
-  Camera,
+  Save, 
+  Eye, 
+  EyeOff,
   Shield,
-  Settings,
-  Eye,
-  AlertTriangle,
-  CheckCircle
+  Trash2,
+  AlertCircle
 } from 'lucide-react';
 
-interface UserData {
+interface UserProfile {
   id: string;
   name: string;
   email: string;
   role: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  country?: string;
+  postalCode?: string;
+  dateOfBirth?: string;
+  emergencyContact?: string;
+  preferences?: string;
+  avatar?: string;
+  isActive: boolean;
   createdAt: string;
-  isActive?: boolean;
-  profile?: {
-    phone?: string;
-    address?: string;
-  };
 }
 
 interface UserManagementModalProps {
   isOpen: boolean;
   onClose: () => void;
-  user: UserData | null;
-  mode: 'view' | 'edit' | 'delete';
-  onSave?: (userData: UserData) => Promise<void>;
-  onDelete?: (userId: string) => Promise<void>;
+  user?: UserProfile | null;
+  onUserUpdate: (updatedUser: UserProfile) => void;
+  onUserDelete?: (userId: string) => void;
+  isAdmin?: boolean;
 }
 
-export default function UserManagementModal({
-  isOpen,
-  onClose,
-  user,
-  mode,
-  onSave,
-  onDelete
+export default function UserManagementModal({ 
+  isOpen, 
+  onClose, 
+  user, 
+  onUserUpdate, 
+  onUserDelete,
+  isAdmin = false 
 }: UserManagementModalProps) {
-  const [formData, setFormData] = useState<UserData | null>(null);
+  const [formData, setFormData] = useState<Partial<UserProfile>>({});
+  const [showPassword, setShowPassword] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [profilePicture, setProfilePicture] = useState<string | null>(null);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string>('');
+
+  // Available roles
+  const availableRoles = ['GUEST', 'STAFF', 'CONCIERGE', 'MANAGER', 'ADMIN'];
 
   useEffect(() => {
     if (user) {
-      setFormData({ ...user });
-      // Set default profile picture if none exists
-      setProfilePicture(`https://ui-avatars.com/api/?name=${user.name}&background=random&color=fff&size=128`);
+      console.log('👤 Setting user data:', user);
+      setFormData({
+        name: user.name || '',
+        email: user.email || '',
+        role: user.role || 'GUEST',
+        phone: user.phone || '',
+        address: user.address || '',
+        city: user.city || '',
+        country: user.country || '',
+        postalCode: user.postalCode || '',
+        dateOfBirth: user.dateOfBirth || '',
+        emergencyContact: user.emergencyContact || '',
+        preferences: user.preferences || '',
+        avatar: user.avatar || '',
+        isActive: user.isActive !== undefined ? user.isActive : true
+      });
+      
+      // Set avatar preview - check if user has profile data
+      if (user.avatar) {
+        console.log('🖼️ Setting avatar preview:', user.avatar);
+        setAvatarPreview(user.avatar);
+      } else {
+        console.log('🖼️ No avatar found, using default');
+        setAvatarPreview('');
+      }
     }
   }, [user]);
 
-  const handleInputChange = (field: keyof UserData, value: string | boolean) => {
-    if (formData) {
-      setFormData({ ...formData, [field]: value });
-    }
+  const handleInputChange = (field: string, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
-  const handleProfileChange = (field: string, value: string) => {
-    if (formData) {
-      setFormData({
-        ...formData,
-        profile: {
-          ...formData.profile,
-          [field]: value
-        }
+  const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setError('Please select a valid image file (JPEG, PNG, GIF)');
+        return;
+      }
+      
+      // Validate file size (max 5MB)
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (file.size > maxSize) {
+        setError('Image size must be less than 5MB');
+        return;
+      }
+      
+      setAvatarFile(file);
+      setError(null); // Clear any previous errors
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setAvatarPreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+      
+      console.log('🖼️ Avatar file selected:', {
+        name: file.name,
+        size: file.size,
+        type: file.type
       });
     }
   };
 
-  const handleProfilePictureUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setProfilePicture(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleSave = async () => {
-    if (!formData || !onSave) return;
-    
-    setIsLoading(true);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setError(null);
     setSuccess(null);
-    
-    try {
-      await onSave(formData);
-      setSuccess('User updated successfully!');
-      setTimeout(() => {
-        onClose();
-      }, 1500);
-    } catch (error: any) {
-      setError(error.message || 'Failed to save user');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!user || !onDelete) return;
-    
     setIsLoading(true);
-    setError(null);
-    
+
     try {
-      await onDelete(user.id);
-      setSuccess('User deleted successfully!');
-      setTimeout(() => {
-        setShowDeleteConfirm(false);
-        onClose();
-      }, 1500);
-    } catch (error: any) {
-      setError(error.message || 'Failed to delete user');
+      // Validate passwords if changing
+      if (newPassword && newPassword !== confirmPassword) {
+        setError('New passwords do not match');
+        setIsLoading(false);
+        return;
+      }
+
+      if (newPassword && newPassword.length < 6) {
+        setError('Password must be at least 6 characters long');
+        setIsLoading(false);
+        return;
+      }
+
+      // Prepare update data
+      const updateData = {
+        ...formData,
+        ...(newPassword && { password: newPassword })
+      };
+
+      // If there's a new avatar file, upload it first
+      if (avatarFile) {
+        try {
+          setSuccess('Uploading profile picture...');
+          
+          const formDataAvatar = new FormData();
+          formDataAvatar.append('avatar', avatarFile);
+          formDataAvatar.append('userId', user?.id || '');
+
+          console.log('🖼️ Uploading avatar for user:', user?.id);
+          console.log('🖼️ File details:', {
+            name: avatarFile.name,
+            size: avatarFile.size,
+            type: avatarFile.type
+          });
+
+          const avatarResponse = await fetch('/api/users/avatar', {
+            method: 'POST',
+            body: formDataAvatar
+          });
+
+          if (avatarResponse.ok) {
+            const avatarResult = await avatarResponse.json();
+            console.log('✅ Avatar uploaded successfully:', avatarResult);
+            updateData.avatar = avatarResult.avatarUrl;
+            setSuccess('Profile picture uploaded! Saving user data...');
+          } else {
+            const errorData = await avatarResponse.json();
+            console.error('❌ Avatar upload failed:', errorData);
+            setError(`Avatar upload failed: ${errorData.message || 'Unknown error'}`);
+            setIsLoading(false);
+            return;
+          }
+        } catch (avatarError) {
+          console.error('❌ Avatar upload error:', avatarError);
+          setError('Failed to upload avatar. Please try again.');
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      // Update user profile
+      const response = await fetch(`/api/users/${user?.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updateData),
+      });
+
+      if (response.ok) {
+        const updatedUser = await response.json();
+        onUserUpdate(updatedUser);
+        setSuccess(`User ${updatedUser.name || 'updated'} successfully!${avatarFile ? ' Profile picture saved!' : ''}`);
+        
+        // Reset password fields
+        setNewPassword('');
+        setConfirmPassword('');
+        
+        // Reset avatar file but keep preview for display
+        setAvatarFile(null);
+        
+        setTimeout(() => {
+          onClose();
+        }, 2000);
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || 'Failed to update user');
+      }
+    } catch (err) {
+      setError('An error occurred while updating the user');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const getRoleColor = (role: string) => {
-    switch (role) {
-      case 'ADMIN': return 'bg-red-100 text-red-800 border-red-200';
-      case 'MANAGER': return 'bg-purple-100 text-purple-800 border-purple-200';
-      case 'STAFF': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'CONCIERGE': return 'bg-indigo-100 text-indigo-800 border-indigo-200';
-      case 'GUEST': return 'bg-gray-100 text-gray-800 border-gray-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+  const handleDeleteUser = async () => {
+    if (!onUserDelete || !user) return;
+    
+    if (confirm(`Are you sure you want to delete user "${user.name}"? This action cannot be undone.`)) {
+      setIsLoading(true);
+      try {
+        const response = await fetch(`/api/users/${user.id}`, {
+          method: 'DELETE',
+        });
+
+        if (response.ok) {
+          onUserDelete(user.id);
+          setSuccess('User deleted successfully!');
+          setTimeout(() => {
+            onClose();
+          }, 1500);
+        } else {
+          const errorData = await response.json();
+          setError(errorData.message || 'Failed to delete user');
+        }
+      } catch (err) {
+        setError('An error occurred while deleting the user');
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
-  const getRoleDescription = (role: string) => {
-    switch (role) {
-      case 'ADMIN':
-        return 'Full system access & control';
-      case 'MANAGER':
-        return 'Department management & oversight';
-      case 'STAFF':
-        return 'Operational tasks & guest services';
-      case 'CONCIERGE':
-        return 'Guest assistance & front desk';
-      case 'GUEST':
-        return 'Basic booking & review access';
-      default:
-        return 'Limited access';
-    }
-  };
-
-  if (!isOpen || !user) return null;
+  if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
-        {/* Modal Header */}
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 border-b border-blue-200/50">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              {mode === 'view' && <Eye className="w-6 h-6 text-blue-600" />}
-              {mode === 'edit' && <Edit className="w-6 h-6 text-green-600" />}
-              {mode === 'delete' && <Trash2 className="w-6 h-6 text-red-600" />}
-              <h2 className="text-2xl font-bold text-gray-900">
-                {mode === 'view' && 'View User Profile'}
-                {mode === 'edit' && 'Edit User Profile'}
-                {mode === 'delete' && 'Delete User'}
-              </h2>
+    <div className="fixed inset-0 flex items-center justify-center p-4 z-50" style={{
+      background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.4) 0%, rgba(147, 51, 234, 0.4) 50%, rgba(79, 70, 229, 0.4) 100%)',
+      backdropFilter: 'blur(20px)',
+      WebkitBackdropFilter: 'blur(20px)'
+    }}>
+      <div className="bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/30 rounded-3xl shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto border border-blue-200/50 backdrop-blur-sm">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-blue-200/50 bg-gradient-to-r from-blue-50/50 to-indigo-50/50">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+              <User className="w-5 h-5 text-white" />
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onClose}
-              className="hover:bg-red-50 hover:border-red-200 hover:text-red-600"
-            >
-              <X className="w-5 h-5" />
-            </Button>
+            <div>
+              <h2 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                {user ? 'Edit User' : 'Add New User'}
+              </h2>
+              <p className="text-sm text-blue-700 font-medium">
+                {user ? `Managing ${user.name}` : 'Create a new user account'}
+              </p>
+            </div>
           </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 bg-gradient-to-br from-red-400 to-red-500 hover:from-red-500 hover:to-red-600 rounded-full flex items-center justify-center transition-all duration-200 shadow-md"
+          >
+            <X className="w-5 h-5 text-white" />
+          </button>
         </div>
 
-        {/* Error/Success Messages */}
-        {error && (
-          <div className="bg-red-50 border-l-4 border-red-400 p-4 mx-6 mt-4">
-            <div className="flex items-center">
-              <AlertTriangle className="w-5 h-5 text-red-400 mr-2" />
-              <p className="text-red-700">{error}</p>
-            </div>
-          </div>
-        )}
-
-        {success && (
-          <div className="bg-green-50 border-l-4 border-green-400 p-4 mx-6 mt-4">
-            <div className="flex items-center">
-              <CheckCircle className="w-5 h-5 text-green-400 mr-2" />
-              <p className="text-green-700">{success}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Modal Content */}
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
-          {mode === 'delete' ? (
-            /* Delete Confirmation */
-            <div className="text-center py-8">
-              <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Trash2 className="w-10 h-10 text-red-600" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-4">
-                Delete User: {user.name}?
-              </h3>
-              <p className="text-gray-600 mb-6">
-                This action cannot be undone. The user will be permanently removed from the system.
-              </p>
-              <div className="flex justify-center space-x-4">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowDeleteConfirm(false)}
-                  className="border-gray-300 text-gray-700 hover:bg-gray-50"
-                  disabled={isLoading}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleDelete}
-                  disabled={isLoading}
-                  className="bg-red-600 hover:bg-red-700 text-white"
-                >
-                  {isLoading ? 'Deleting...' : 'Delete User'}
-                </Button>
-              </div>
-            </div>
-          ) : (
-            /* View/Edit Content */
-            <div className="space-y-6">
-              {/* Profile Picture Section */}
-              <div className="text-center">
-                <div className="relative inline-block">
-                  <div className="w-32 h-32 rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-indigo-600 mx-auto mb-4 shadow-lg">
-                    {profilePicture ? (
-                      <img
-                        src={profilePicture}
-                        alt={user.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <User className="w-16 h-16 text-white" />
-                      </div>
-                    )}
-                  </div>
-                  {mode === 'edit' && (
-                    <label className="absolute bottom-2 right-2 bg-white rounded-full p-2 shadow-lg cursor-pointer hover:bg-gray-50 transition-colors">
-                      <Camera className="w-5 h-5 text-blue-600" />
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleProfilePictureUpload}
-                        className="hidden"
-                      />
-                    </label>
-                  )}
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">{user.name}</h3>
-                <Badge className={`${getRoleColor(user.role)} px-4 py-2 text-sm font-medium`}>
-                  {user.role}
-                </Badge>
-                <p className="text-sm text-gray-600 mt-2">{getRoleDescription(user.role)}</p>
-              </div>
-
-              {/* User Information */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Name */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700 flex items-center">
-                    <User className="w-4 h-4 mr-2 text-blue-600" />
-                    Full Name
-                  </label>
-                  {mode === 'edit' ? (
-                    <input
-                      type="text"
-                      value={formData?.name || ''}
-                      onChange={(e) => handleInputChange('name', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Enter full name"
-                    />
-                  ) : (
-                    <p className="text-gray-900 font-medium">{user.name}</p>
-                  )}
-                </div>
-
-                {/* Email */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700 flex items-center">
-                    <Mail className="w-4 h-4 mr-2 text-blue-600" />
-                    Email Address
-                  </label>
-                  {mode === 'edit' ? (
-                    <input
-                      type="email"
-                      value={formData?.email || ''}
-                      onChange={(e) => handleInputChange('email', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Enter email address"
-                    />
-                  ) : (
-                    <p className="text-gray-900 font-medium">{user.email}</p>
-                  )}
-                </div>
-
-                {/* Phone */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700 flex items-center">
-                    <Phone className="w-4 h-4 mr-2 text-blue-600" />
-                    Phone Number
-                  </label>
-                  {mode === 'edit' ? (
-                    <input
-                      type="tel"
-                      value={formData?.profile?.phone || ''}
-                      onChange={(e) => handleProfileChange('phone', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Enter phone number"
-                    />
-                  ) : (
-                    <p className="text-gray-900 font-medium">{user.profile?.phone || 'Not provided'}</p>
-                  )}
-                </div>
-
-                {/* Address */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700 flex items-center">
-                    <MapPin className="w-4 h-4 mr-2 text-blue-600" />
-                    Address
-                  </label>
-                  {mode === 'edit' ? (
-                    <input
-                      type="text"
-                      value={formData?.profile?.address || ''}
-                      onChange={(e) => handleProfileChange('address', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Enter address"
-                    />
-                  ) : (
-                    <p className="text-gray-900 font-medium">{user.profile?.address || 'Not provided'}</p>
-                  )}
-                </div>
-
-                {/* Role */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700 flex items-center">
-                    <Shield className="w-4 h-4 mr-2 text-blue-600" />
-                    User Role
-                  </label>
-                  {mode === 'edit' ? (
-                    <select
-                      value={formData?.role || ''}
-                      onChange={(e) => handleInputChange('role', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="GUEST">Guest</option>
-                      <option value="STAFF">Staff</option>
-                      <option value="CONCIERGE">Concierge</option>
-                      <option value="MANAGER">Manager</option>
-                      <option value="ADMIN">Admin</option>
-                    </select>
-                  ) : (
-                    <Badge className={getRoleColor(user.role)}>
-                      {user.role}
-                    </Badge>
-                  )}
-                </div>
-
-                {/* Join Date */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700 flex items-center">
-                    <Clock className="w-4 h-4 mr-2 text-blue-600" />
-                    Member Since
-                  </label>
-                  <p className="text-gray-900 font-medium">
-                    {new Date(user.createdAt).toLocaleDateString()}
-                  </p>
-                </div>
-              </div>
-
-              {/* Account Status */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700 flex items-center">
-                  <Settings className="w-4 h-4 mr-2 text-blue-600" />
-                  Account Status
-                </label>
-                {mode === 'edit' ? (
-                  <div className="flex items-center space-x-4">
-                    <label className="flex items-center space-x-2">
-                      <input
-                        type="radio"
-                        name="status"
-                        value="active"
-                        checked={formData?.isActive !== false}
-                        onChange={() => handleInputChange('isActive', true)}
-                        className="text-blue-600"
-                      />
-                      <span className="text-sm text-gray-700">Active</span>
-                    </label>
-                    <label className="flex items-center space-x-2">
-                      <input
-                        type="radio"
-                        name="status"
-                        value="inactive"
-                        checked={formData?.isActive === false}
-                        onChange={() => handleInputChange('isActive', false)}
-                        className="text-blue-600"
-                      />
-                      <span className="text-sm text-gray-700">Inactive</span>
-                    </label>
-                  </div>
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+          {/* Avatar Section */}
+          <div className="flex flex-col items-center space-y-4">
+            <div className="relative">
+              <div className="w-24 h-24 rounded-full overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 border-4 border-white shadow-lg">
+                {avatarPreview ? (
+                  <img
+                    src={avatarPreview}
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                  />
                 ) : (
-                  <Badge className={user.isActive !== false ? 'bg-green-100 text-green-800 border-green-200' : 'bg-red-100 text-red-800 border-red-200'}>
-                    {user.isActive !== false ? 'Active' : 'Inactive'}
-                  </Badge>
+                  <div className="w-full h-full flex items-center justify-center">
+                    <User className="w-12 h-12 text-gray-400" />
+                  </div>
                 )}
               </div>
+              
+              {/* Camera Upload Button */}
+              <label 
+                className="absolute bottom-0 right-0 w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center cursor-pointer hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-md hover:shadow-lg"
+                title="Click to upload or drag image here"
+              >
+                <Camera className="w-4 h-4 text-white" />
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarChange}
+                  className="hidden"
+                />
+              </label>
+              
+              {/* Remove Avatar Button (only show if there's a preview) */}
+              {avatarPreview && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAvatarFile(null);
+                    setAvatarPreview('');
+                    setError(null);
+                  }}
+                  className="absolute top-0 right-0 w-6 h-6 bg-gradient-to-br from-red-400 to-red-500 rounded-full flex items-center justify-center cursor-pointer hover:from-red-500 hover:to-red-600 transition-all duration-200 shadow-md"
+                >
+                  <X className="w-3 h-3 text-white" />
+                </button>
+              )}
+            </div>
+            
+            <div className="text-center space-y-2">
+              <p className="text-sm text-blue-600 font-medium">
+                {avatarPreview ? 'Profile picture updated' : 'Click the camera icon to change profile picture'}
+              </p>
+              {avatarFile && (
+                <div className="space-y-1">
+                  <p className="text-xs text-gray-500">
+                    File: {avatarFile.name} ({(avatarFile.size / 1024 / 1024).toFixed(2)} MB)
+                  </p>
+                  <div className="w-full bg-gray-200 rounded-full h-1.5">
+                    <div className="bg-blue-600 h-1.5 rounded-full animate-pulse" style={{width: '100%'}}></div>
+                  </div>
+                  <p className="text-xs text-blue-600">Ready to save</p>
+                </div>
+              )}
+              <p className="text-xs text-gray-500">
+                Supported formats: JPEG, PNG, GIF • Max size: 5MB
+              </p>
+            </div>
+          </div>
+
+          {/* Basic Information */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Full Name *
+              </label>
+              <input
+                type="text"
+                value={formData.name || ''}
+                onChange={(e) => handleInputChange('name', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/80 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-200"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Email *
+              </label>
+              <input
+                type="email"
+                value={formData.email || ''}
+                onChange={(e) => handleInputChange('email', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/80 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-200"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Role *
+              </label>
+              <select
+                value={formData.role || 'GUEST'}
+                onChange={(e) => handleInputChange('role', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/80 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-200"
+                disabled={!isAdmin}
+              >
+                {availableRoles.map((role) => (
+                  <option key={role} value={role}>
+                    {role}
+                  </option>
+                ))}
+              </select>
+              {!isAdmin && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Only admins can change user roles
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Phone
+              </label>
+              <input
+                type="tel"
+                value={formData.phone || ''}
+                onChange={(e) => handleInputChange('phone', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+
+          {/* Address Information */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Address
+              </label>
+              <input
+                type="text"
+                value={formData.address || ''}
+                onChange={(e) => handleInputChange('address', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                City
+              </label>
+              <input
+                type="text"
+                value={formData.city || ''}
+                onChange={(e) => handleInputChange('city', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Country
+              </label>
+              <input
+                type="text"
+                value={formData.country || ''}
+                onChange={(e) => handleInputChange('country', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Postal Code
+              </label>
+              <input
+                type="text"
+                value={formData.postalCode || ''}
+                onChange={(e) => handleInputChange('postalCode', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+
+          {/* Additional Information */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Date of Birth
+              </label>
+              <input
+                type="date"
+                value={formData.dateOfBirth || ''}
+                onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Emergency Contact
+              </label>
+              <input
+                type="text"
+                value={formData.emergencyContact || ''}
+                onChange={(e) => handleInputChange('emergencyContact', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Preferences
+            </label>
+            <textarea
+              value={formData.preferences || ''}
+              onChange={(e) => handleInputChange('preferences', e.target.value)}
+              rows={3}
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Any special preferences or notes..."
+            />
+          </div>
+
+          {/* Password Change Section */}
+          <div className="border-t border-gray-200 pt-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+              <Lock className="w-5 h-5 mr-2 text-blue-500" />
+              Change Password
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  New Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Leave blank to keep current"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Confirm New Password
+                </label>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Confirm new password"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Account Status */}
+          <div className="flex items-center space-x-3">
+            <input
+              type="checkbox"
+              id="isActive"
+              checked={formData.isActive !== undefined ? formData.isActive : true}
+              onChange={(e) => handleInputChange('isActive', e.target.checked)}
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <label htmlFor="isActive" className="text-sm font-medium text-gray-700">
+              Account is active
+            </label>
+          </div>
+
+          {/* Error and Success Messages */}
+          {error && (
+            <div className="flex items-center space-x-2 p-4 bg-red-50 border border-red-200 rounded-xl">
+              <AlertCircle className="w-5 h-5 text-red-500" />
+              <span className="text-red-700">{error}</span>
             </div>
           )}
-        </div>
 
-        {/* Modal Footer */}
-        <div className="bg-gray-50 p-6 border-t border-gray-200">
-          <div className="flex justify-end space-x-3">
-            {mode === 'view' && (
-              <>
-                <Button
-                  variant="outline"
-                  onClick={() => onClose()}
-                  className="border-gray-300 text-gray-700 hover:bg-gray-50"
-                >
-                  Close
-                </Button>
-                <Button
-                  onClick={() => {/* Switch to edit mode */}}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  <Edit className="w-4 h-4 mr-2" />
-                  Edit User
-                </Button>
-                <Button
-                  onClick={() => setShowDeleteConfirm(true)}
-                  className="bg-red-600 hover:bg-red-700 text-white"
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete User
-                </Button>
-              </>
-            )}
-            {mode === 'edit' && (
-              <>
-                <Button
-                  variant="outline"
-                  onClick={() => onClose()}
-                  className="border-gray-300 text-gray-700 hover:bg-gray-50"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleSave}
+          {success && (
+            <div className="flex items-center space-x-2 p-4 bg-green-50 border border-green-200 rounded-xl">
+              <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                <span className="text-white text-xs">✓</span>
+              </div>
+              <span className="text-green-700">{success}</span>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex items-center justify-between pt-6 border-t border-blue-200/50 bg-gradient-to-r from-blue-50/30 to-indigo-50/30">
+            <div className="flex space-x-3">
+              {onUserDelete && user && (
+                <button
+                  type="button"
+                  onClick={handleDeleteUser}
                   disabled={isLoading}
-                  className="bg-green-600 hover:bg-green-700 text-white"
+                  className="px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl hover:from-red-600 hover:to-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-all duration-200 shadow-md hover:shadow-lg"
                 >
-                  <Save className="w-4 h-4 mr-2" />
-                  {isLoading ? 'Saving...' : 'Save Changes'}
-                </Button>
-              </>
-            )}
+                  <Trash2 className="w-4 h-4" />
+                  <span>Delete User</span>
+                </button>
+              )}
+            </div>
+
+            <div className="flex space-x-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-all duration-200 hover:shadow-md"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-all duration-200 shadow-md hover:shadow-lg"
+              >
+                <Save className="w-4 h-4" />
+                <span>{isLoading ? 'Saving...' : 'Save Changes'}</span>
+              </button>
+            </div>
           </div>
-        </div>
+        </form>
       </div>
     </div>
   );

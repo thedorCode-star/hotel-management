@@ -71,15 +71,58 @@ export default function BookingsPage() {
     dateRange: 'all',
   });
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  
+  // Authentication state
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  // Check authentication on component mount
+  useEffect(() => {
+    checkAuthentication();
+  }, []);
 
   useEffect(() => {
-    fetchBookings();
-    fetchRefunds(); // Also fetch refunds for financial summary
-  }, []);
+    if (isAuthenticated) {
+      fetchBookings();
+      fetchRefunds(); // Also fetch refunds for financial summary
+    }
+  }, [isAuthenticated]);
 
   useEffect(() => {
     applyFilters();
   }, [bookings, filters]);
+
+  const checkAuthentication = async () => {
+    try {
+      // Check for auth token in cookies or localStorage
+      const token = localStorage.getItem('token') || getCookie('auth-token');
+      
+      if (!token) {
+        console.log('❌ No auth token found, redirecting to login');
+        router.push('/auth/login');
+        return;
+      }
+
+      // Verify token with backend (optional - you can implement this)
+      // For now, we'll assume token presence means authenticated
+      setIsAuthenticated(true);
+      setAuthLoading(false);
+      
+      // In a real app, you'd verify the token and get user role from it
+      console.log('✅ User authenticated');
+    } catch (error) {
+      console.error('Authentication check failed:', error);
+      router.push('/auth/login');
+    }
+  };
+
+  // Helper function to get cookie value
+  const getCookie = (name: string): string | null => {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop()?.split(';').shift() || null;
+    return null;
+  };
 
   const fetchBookings = async () => {
     try {
@@ -284,6 +327,25 @@ export default function BookingsPage() {
   // Fetch real refund data for accurate financial calculations
   const [totalRefunds, setTotalRefunds] = useState(0);
   const [isRefundsLoading, setIsRefundsLoading] = useState(true);
+
+  // Show loading while checking authentication
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 sm:p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center py-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Checking authentication...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Redirect if not authenticated
+  if (!isAuthenticated) {
+    return null; // Component will unmount and redirect
+  }
 
   if (isLoading) {
     return (

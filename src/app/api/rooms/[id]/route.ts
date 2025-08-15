@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getBuildSafeDatabase } from '../../../../lib/build-safe-db';
+import { canEditRooms, canDeleteRooms, UserRole } from '../../../../lib/permissions';
 
 export async function GET(
   request: NextRequest,
@@ -77,11 +78,14 @@ export async function PUT(
       );
     }
 
-    // Check if user has permission to edit rooms
-    const allowedRoles = ['ADMIN', 'MANAGER', 'STAFF'];
-    if (!allowedRoles.includes(userRole)) {
+    // Check if user has permission to edit rooms using our permissions system
+    if (!canEditRooms(userRole as UserRole)) {
       return NextResponse.json(
-        { error: 'Insufficient permissions. Only ADMIN, MANAGER, and STAFF can edit rooms.' },
+        { 
+          error: 'Insufficient permissions. Only Administrators and Managers can edit rooms.',
+          requiredRole: 'ADMIN or MANAGER',
+          currentRole: userRole
+        },
         { status: 403 }
       );
     }
@@ -217,11 +221,14 @@ export async function DELETE(
       );
     }
 
-    // Check if user has permission to delete rooms (only ADMIN and MANAGER)
-    const allowedRoles = ['ADMIN', 'MANAGER'];
-    if (!allowedRoles.includes(userRole)) {
+    // Check if user has permission to delete rooms using our permissions system
+    if (!canDeleteRooms(userRole as UserRole)) {
       return NextResponse.json(
-        { error: 'Insufficient permissions. Only ADMIN and MANAGER can delete rooms.' },
+        { 
+          error: 'Insufficient permissions. Only Administrators can delete rooms.',
+          requiredRole: 'ADMIN',
+          currentRole: userRole
+        },
         { status: 403 }
       );
     }

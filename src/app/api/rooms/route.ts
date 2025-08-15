@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getBuildSafeDatabase } from '../../../lib/build-safe-db';
+import { canCreateRooms, UserRole } from '../../../lib/permissions';
 
 export async function GET(request: NextRequest) {
   try {
@@ -95,11 +96,14 @@ export async function POST(request: NextRequest) {
     
     console.log('👤 User attempting room creation:', { userId, userRole });
     
-    // Check if user has permission to create rooms
-    const allowedRoles = ['ADMIN', 'MANAGER', 'STAFF'];
-    if (!allowedRoles.includes(userRole)) {
+    // Check if user has permission to create rooms using our permissions system
+    if (!canCreateRooms(userRole as UserRole)) {
       return NextResponse.json(
-        { error: 'Insufficient permissions. Only ADMIN, MANAGER, and STAFF can create rooms.' },
+        { 
+          error: 'Insufficient permissions. Only Administrators and Managers can create rooms.',
+          requiredRole: 'ADMIN or MANAGER',
+          currentRole: userRole
+        },
         { status: 403 }
       );
     }
@@ -141,6 +145,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log('🏗️ Attempting to create room with data:', {
+      number,
+      type,
+      capacity,
+      price,
+      description,
+      status: 'AVAILABLE'
+    });
+
     const room = await db.room.create({
       data: {
         number,
@@ -154,12 +167,23 @@ export async function POST(request: NextRequest) {
 
     // Log the room creation for security audit
     console.log(`🔐 ROOM CREATED: User ${userId} (${userRole}) created room ${number}`);
+    console.log('✅ Room created successfully:', room);
 
     return NextResponse.json({ room }, { status: 201 });
-  } catch (error) {
-    console.error('Error creating room:', error);
+  } catch (error: any) {
+    console.error('❌ Error creating room:', error);
+    console.error('❌ Error details:', {
+      message: error?.message || 'Unknown error',
+      stack: error?.stack,
+      name: error?.name
+    });
+    
+    // Return more specific error information
     return NextResponse.json(
-      { error: 'Failed to create room' },
+      { 
+        error: 'Failed to create room',
+        details: error?.message || 'Unknown database error'
+      },
       { status: 500 }
     );
   }
