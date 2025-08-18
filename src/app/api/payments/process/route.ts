@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
 
           // If payment method ID is provided, confirm the payment
     let paymentStatus = 'PENDING';
-    let transactionId = paymentIntent.id;
+    const transactionId = paymentIntent.id;
 
     if (paymentMethodId) {
       console.log('🔐 Confirming payment with payment method:', paymentMethodId);

@@ -162,7 +162,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    let whereClause: any = {};
+    const whereClause: any = {};
     
     if (bookingId) {
       whereClause.bookingId = bookingId;

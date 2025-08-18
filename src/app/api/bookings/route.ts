@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     const checkIn = searchParams.get('checkIn');
     const checkOut = searchParams.get('checkOut');
 
-    let whereClause: any = {};
+    const whereClause: any = {};
     
     if (status && status !== 'all') {
       whereClause.status = status;

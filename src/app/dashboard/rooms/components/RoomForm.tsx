@@ -91,7 +91,7 @@ export default function RoomForm({ room, mode, onClose }: RoomFormProps) {
     setErrors({}); // Clear previous errors
 
     try {
-      let roomData: any = { ...formData };
+      const roomData: any = { ...formData };
       
       console.log('🏗️ Preparing room data:', roomData);
       

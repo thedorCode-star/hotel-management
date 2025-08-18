@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     const minPrice = searchParams.get('minPrice');
     const maxPrice = searchParams.get('maxPrice');
 
-    let whereClause: any = {};
+    const whereClause: any = {};
     
     if (status && status !== 'all') {
       // Handle comma-separated status values
