@@ -410,7 +410,7 @@ exports[`Navigation matches snapshot for mobile menu open 1`] = `
 exports[`Navigation matches snapshot for unauthenticated user 1`] = `
 <div>
   <nav
-    class="bg-white shadow"
+    class="bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/70 border-b border-gray-100"
   >
     <div
       class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
@@ -421,16 +421,67 @@ exports[`Navigation matches snapshot for unauthenticated user 1`] = `
         <div
           class="flex items-center"
         >
+          <a
+            class="flex-shrink-0 group"
+            href="/"
+          >
+            <h1
+              class="text-xl font-bold text-blue-600 group-hover:text-blue-700 transition-colors"
+            >
+              Hotel Management
+            </h1>
+          </a>
           <div
-            class="animate-pulse bg-gray-200 h-8 w-32 rounded"
-          />
+            class="hidden md:ml-6 md:flex md:space-x-1"
+          >
+            <a
+              class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50/60 transition-colors"
+              href="/rooms"
+            >
+              Rooms
+            </a>
+          </div>
         </div>
         <div
           class="flex items-center"
         >
           <div
-            class="animate-pulse bg-gray-200 h-8 w-24 rounded"
-          />
+            class="flex space-x-4"
+          >
+            <a
+              class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-50/60 transition-colors"
+              href="/auth/login"
+            >
+              Sign In
+            </a>
+            <a
+              class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 shadow-sm hover:shadow transition"
+              href="/auth/register"
+            >
+              Sign Up
+            </a>
+          </div>
+        </div>
+        <div
+          class="md:hidden flex items-center"
+        >
+          <button
+            class="text-gray-700 hover:text-blue-600 p-2"
+          >
+            <svg
+              class="h-6 w-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                d="M4 6h16M4 12h16M4 18h16"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+              />
+            </svg>
+          </button>
         </div>
       </div>
     </div>

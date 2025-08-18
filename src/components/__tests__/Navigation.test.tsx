@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import Navigation from '../Navigation';
 
@@ -36,13 +36,17 @@ describe('Navigation', () => {
   });
 
   it('renders navigation without user', async () => {
-    // Mock the auth check to return no user
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
-      ok: false,
-      status: 401,
-    });
+    // Mock both API calls - auth check returns no user, refunds check won't be called
+    (global.fetch as jest.Mock)
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ error: 'Unauthorized' }),
+      });
 
-    render(<Navigation />);
+    await act(async () => {
+      render(<Navigation />);
+    });
     
     // Wait for the auth check to complete
     await waitFor(() => {
@@ -60,20 +64,37 @@ describe('Navigation', () => {
       role: 'USER',
     };
 
+    // Mock all possible fetch calls with more responses to handle any additional calls
     (global.fetch as jest.Mock)
-      .mockResolvedValueOnce({
+      .mockResolvedValueOnce({  // First call: /api/auth/me
         ok: true,
         json: async () => ({ user: mockUser }),
       })
-      .mockResolvedValueOnce({
+      .mockResolvedValueOnce({  // Second call: /api/refunds
         ok: true,
+        json: async () => ({ refunds: [] }),
+      })
+      .mockResolvedValueOnce({  // Third call: /api/auth/logout
+        ok: true,
+        json: async () => ({ success: true }),
+      })
+      // Add more mock responses to handle any additional fetch calls
+      .mockResolvedValue({
+        ok: false,
+        status: 401,
+        json: async () => ({ error: 'Unauthorized' }),
       });
 
     localStorageMock.getItem.mockReturnValue('mock-token');
 
-    render(<Navigation />);
+    await act(async () => {
+      render(<Navigation />);
+    });
     
-    await screen.findByText('John Doe');
+    // Wait for both API calls to complete and user to be loaded
+    await waitFor(() => {
+      expect(screen.getByText('John Doe')).toBeInTheDocument();
+    });
     
     const userButton = screen.getByText('John Doe');
     fireEvent.click(userButton);
@@ -97,17 +118,26 @@ describe('Navigation', () => {
       role: 'USER',
     };
 
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ user: mockUser }),
-    });
+    (global.fetch as jest.Mock)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ user: mockUser }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ refunds: [] }),
+      });
 
     localStorageMock.getItem.mockReturnValue('mock-token');
 
-    render(<Navigation />);
+    await act(async () => {
+      render(<Navigation />);
+    });
     
-    // Wait for the user to be loaded
-    await screen.findByText('John Doe');
+    // Wait for both API calls to complete and user to be loaded
+    await waitFor(() => {
+      expect(screen.getByText('John Doe')).toBeInTheDocument();
+    });
     
     // Find the mobile menu button (hamburger menu)
     const mobileMenuButton = screen.getByRole('button', { name: '' });
@@ -129,17 +159,26 @@ describe('Navigation', () => {
       role: 'ADMIN',
     };
 
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ user: mockUser }),
-    });
+    (global.fetch as jest.Mock)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ user: mockUser }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ refunds: [] }),
+      });
 
     localStorageMock.getItem.mockReturnValue('mock-token');
 
-    render(<Navigation />);
+    await act(async () => {
+      render(<Navigation />);
+    });
     
-    // Wait for the admin user to be loaded
-    await screen.findByText('Admin User');
+    // Wait for both API calls to complete and admin user to be loaded
+    await waitFor(() => {
+      expect(screen.getByText('Admin User')).toBeInTheDocument();
+    });
     
     expect(screen.getByText('Admin')).toBeInTheDocument();
   });
@@ -152,25 +191,51 @@ describe('Navigation', () => {
       role: 'USER',
     };
 
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ user: mockUser }),
-    });
+    (global.fetch as jest.Mock)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ user: mockUser }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ refunds: [] }),
+      });
 
     localStorageMock.getItem.mockReturnValue('mock-token');
 
-    render(<Navigation />);
+    await act(async () => {
+      render(<Navigation />);
+    });
     
-    // Wait for the component to load
-    await screen.findByText('John Doe');
+    // Wait for both API calls to complete and user to be loaded
+    await waitFor(() => {
+      expect(screen.getByText('John Doe')).toBeInTheDocument();
+    });
     
     expect(screen.getByText('John Doe')).toBeInTheDocument();
     expect(screen.getByText('Dashboard')).toBeInTheDocument();
   });
 
   // Snapshot tests
-  it('matches snapshot for unauthenticated user', () => {
-    const { container } = render(<Navigation />);
+  it('matches snapshot for unauthenticated user', async () => {
+    // Mock fetch to return error response with json method
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: false,
+      status: 401,
+      json: async () => ({ error: 'Unauthorized' }),
+    });
+
+    let container: any;
+    await act(async () => {
+      const result = render(<Navigation />);
+      container = result.container;
+    });
+    
+    // Wait for auth check to complete
+    await waitFor(() => {
+      expect(screen.getByText('Hotel Management')).toBeInTheDocument();
+    });
+    
     expect(container).toMatchSnapshot();
   });
 
@@ -182,16 +247,28 @@ describe('Navigation', () => {
       role: 'USER',
     };
 
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ user: mockUser }),
-    });
+    (global.fetch as jest.Mock)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ user: mockUser }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ refunds: [] }),
+      });
 
     localStorageMock.getItem.mockReturnValue('mock-token');
 
-    const { container } = render(<Navigation />);
+    let container: any;
+    await act(async () => {
+      const result = render(<Navigation />);
+      container = result.container;
+    });
     
-    await screen.findByText('John Doe');
+    // Wait for both API calls to complete and user to be loaded
+    await waitFor(() => {
+      expect(screen.getByText('John Doe')).toBeInTheDocument();
+    });
     
     expect(container).toMatchSnapshot();
   });
@@ -204,26 +281,54 @@ describe('Navigation', () => {
       role: 'ADMIN',
     };
 
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ user: mockUser }),
-    });
+    (global.fetch as jest.Mock)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ user: mockUser }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ refunds: [] }),
+      });
 
     localStorageMock.getItem.mockReturnValue('mock-token');
 
-    const { container } = render(<Navigation />);
+    let container: any;
+    await act(async () => {
+      const result = render(<Navigation />);
+      container = result.container;
+    });
     
-    // Wait for the admin user to be loaded
-    await screen.findByText('Admin User');
+    // Wait for both API calls to complete and admin user to be loaded
+    await waitFor(() => {
+      expect(screen.getByText('Admin User')).toBeInTheDocument();
+    });
     
     expect(container).toMatchSnapshot();
   });
 
-  it('matches snapshot for loading state', () => {
+  it('matches snapshot for loading state', async () => {
     localStorageMock.getItem.mockReturnValue('mock-token');
-    (global.fetch as jest.Mock).mockImplementation(() => new Promise(() => {})); // Never resolves
+    // Mock fetch to return a promise that resolves after a delay to simulate loading
+    (global.fetch as jest.Mock).mockImplementation(() => 
+      new Promise((resolve) => {
+        setTimeout(() => {
+          resolve({
+            ok: false,
+            status: 401,
+            json: async () => ({ error: 'Unauthorized' }),
+          });
+        }, 1000); // 1 second delay
+      })
+    );
 
-    const { container } = render(<Navigation />);
+    let container: any;
+    await act(async () => {
+      const result = render(<Navigation />);
+      container = result.container;
+    });
+    
+    // The component should be in loading state initially
     expect(container).toMatchSnapshot();
   });
 
@@ -235,17 +340,28 @@ describe('Navigation', () => {
       role: 'USER',
     };
 
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ user: mockUser }),
-    });
+    (global.fetch as jest.Mock)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ user: mockUser }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ refunds: [] }),
+      });
 
     localStorageMock.getItem.mockReturnValue('mock-token');
 
-    const { container } = render(<Navigation />);
+    let container: any;
+    await act(async () => {
+      const result = render(<Navigation />);
+      container = result.container;
+    });
     
-    // Wait for the user to be loaded
-    await screen.findByText('John Doe');
+    // Wait for both API calls to complete and user to be loaded
+    await waitFor(() => {
+      expect(screen.getByText('John Doe')).toBeInTheDocument();
+    });
     
     const mobileMenuButton = screen.getByRole('button', { name: '' });
     fireEvent.click(mobileMenuButton);
